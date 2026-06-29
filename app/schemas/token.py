@@ -34,5 +34,8 @@ class LoginResponse(BaseModel):
     """
     Schema for successful authentication response.
     """
-    token: Token
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default="Bearer", description="Token type, e.g. Bearer")
+    expires_in: int = Field(..., description="Token validity duration in seconds")
     user: UserResponse
+    refresh_token: str | None = Field(default=None, description="Optional JWT refresh token")

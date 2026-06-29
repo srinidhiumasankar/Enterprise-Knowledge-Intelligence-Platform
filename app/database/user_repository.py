@@ -49,6 +49,14 @@ class UserRepository:
             select(User).where(User.email == email)
         ).first()
 
+    def get_by_uuid(self, user_uuid: str) -> User | None:
+        """
+        Retrieve a user by their unique UUID string.
+        """
+        return self.db.scalars(
+            select(User).where(User.uuid == user_uuid)
+        ).first()
+
     def update_user(self, db_user: User, update_data: UserUpdate | dict) -> User:
         """
         Update fields on an existing user record.

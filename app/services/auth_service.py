@@ -61,14 +61,17 @@ class AuthService:
         access_token = create_access_token(subject=user.uuid)
         refresh_token = create_refresh_token(subject=user.uuid)
 
-        token = Token(
-            access_token=access_token,
-            token_type="bearer",
-            refresh_token=refresh_token,
-        )
+        from app.config import settings
+        expires_in_seconds = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 
         user_resp = UserResponse.model_validate(user)
 
         logger.info(f"Authentication success: user '{email}' logged in (UUID: {user.uuid}).")
 
-        return LoginResponse(token=token, user=user_resp)
+        return LoginResponse(
+            access_token=access_token,
+            token_type="Bearer",
+            expires_in=expires_in_seconds,
+            user=user_resp,
+            refresh_token=refresh_token,
+        )

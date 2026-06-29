@@ -10,6 +10,9 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 
 
+from app.utils.security import hash_password
+
+
 class UserService:
     """
     Service class encapsulating business logic for User operations.
@@ -28,11 +31,11 @@ class UserService:
         existing_user = self.repository.get_by_email(user_in.email)
         if existing_user:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_409_CONFLICT,
                 detail="Email already registered",
             )
-        # Note: Password hashing is skipped in this phase per instructions.
-        return self.repository.create_user(user_in, hashed_password=user_in.password)
+        hashed = hash_password(user_in.password)
+        return self.repository.create_user(user_in, hashed_password=hashed)
 
     def get_user_by_id(self, user_id: int) -> User:
         """
@@ -68,11 +71,15 @@ class UserService:
             existing_user = self.repository.get_by_email(update_data.email)
             if existing_user:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail="Email already registered",
                 )
 
-        return self.repository.update_user(user, update_data)
+        update_dict = update_data.model_dump(exclude_unset=True)
+        if "password" in update_dict and update_dict["password"]:
+            update_dict["password"] = hash_password(update_dict["password"])
+
+        return self.repository.update_user(user, update_dict)
 
     def delete_user(self, user_id: int) -> None:
         """
