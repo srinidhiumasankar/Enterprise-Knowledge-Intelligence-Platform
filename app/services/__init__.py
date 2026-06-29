@@ -3,4 +3,5 @@
 # Business logic and AI service integrations will live here.
 
 from app.services.user_service import UserService
+from app.services.auth_service import AuthService
 
