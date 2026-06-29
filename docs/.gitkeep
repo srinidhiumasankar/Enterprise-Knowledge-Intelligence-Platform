@@ -1,0 +1,4 @@
+# docs/
+# ------
+# Project documentation — architecture diagrams, API references, ADRs, etc.
+# This file exists solely to ensure the docs/ directory is tracked by Git.

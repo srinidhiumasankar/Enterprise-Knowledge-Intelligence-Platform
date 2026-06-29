@@ -1,0 +1,574 @@
+/*
+ * style.css
+ * ---------
+ * Custom design system for the Enterprise Knowledge Intelligence Platform.
+ * Extends Bootstrap 5 with a dark, professional corporate aesthetic.
+ *
+ * Sections:
+ *   1.  CSS Custom Properties (design tokens)
+ *   2.  Reset / Global
+ *   3.  Navbar
+ *   4.  Hero Section
+ *   5.  Hero Buttons
+ *   6.  Dashboard Cards
+ *   7.  Section Header
+ *   8.  Footer
+ *   9.  Utilities
+ *   10. Animations
+ *   11. Responsive
+ */
+
+/* ============================================================
+   1. CSS Custom Properties
+   ============================================================ */
+:root {
+  /* Background layers */
+  --clr-bg:         #0b0c10;
+  --clr-surface:    #12131a;
+  --clr-surface-2:  #1a1b26;
+  --clr-border:     rgba(255, 255, 255, 0.07);
+
+  /* Accent palette */
+  --clr-accent-1:   #5c6bc0;   /* indigo  — primary brand   */
+  --clr-accent-2:   #00bcd4;   /* cyan    — secondary       */
+  --clr-accent-3:   #e91e8c;   /* rose    — decorative blob */
+
+  /* Card accent colours (one per dashboard card) */
+  --clr-card-docs:    #5c6bc0;
+  --clr-card-ai:      #26c6da;
+  --clr-card-search:  #66bb6a;
+  --clr-card-analytics: #ffa726;
+
+  /* Typography */
+  --clr-text:       #e2e3f0;
+  --clr-text-muted: #72738c;
+
+  /* Font stack */
+  --font-base: "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Spacing rhythm */
+  --section-py: 5.5rem;
+
+  /* Border radius scale */
+  --radius-xs: 0.35rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+
+  /* Motion */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast:   150ms ease;
+  --transition-normal: 280ms ease;
+  --transition-slow:   480ms var(--ease-out);
+}
+
+/* ============================================================
+   2. Reset / Global
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-base);
+  background-color: var(--clr-bg);
+  color: var(--clr-text);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   3. Navbar
+   ============================================================ */
+.ekip-navbar {
+  background: rgba(11, 12, 16, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--clr-border);
+  padding: 0.8rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  transition: background var(--transition-normal);
+}
+
+.ekip-navbar.scrolled {
+  background: rgba(11, 12, 16, 0.98);
+  box-shadow: 0 1px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Brand icon box */
+.brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--clr-accent-1), var(--clr-accent-2));
+  font-size: 1rem;
+  color: #fff;
+}
+
+/* Brand text — truncate gracefully on small screens */
+.brand-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--clr-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+/* Nav links */
+.ekip-navbar .nav-link {
+  color: var(--clr-text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.ekip-navbar .nav-link:hover,
+.ekip-navbar .nav-link.active {
+  color: var(--clr-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Phase pill */
+.nav-badge {
+  display: inline-block;
+  padding: 0.22rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(92, 107, 192, 0.14);
+  border: 1px solid rgba(92, 107, 192, 0.35);
+  color: var(--clr-accent-1);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   4. Hero Section
+   ============================================================ */
+.hero-section {
+  position: relative;
+  min-height: calc(100vh - 58px);
+  display: flex;
+  align-items: center;
+  padding: var(--section-py) 0;
+  overflow: hidden;
+}
+
+/* Ambient blobs */
+.hero-bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.14;
+  will-change: transform;
+}
+
+.shape-1 {
+  width: 560px;
+  height: 560px;
+  background: var(--clr-accent-1);
+  top: -150px;
+  left: -200px;
+  animation: blobFloat 10s ease-in-out infinite alternate;
+}
+
+.shape-2 {
+  width: 420px;
+  height: 420px;
+  background: var(--clr-accent-2);
+  top: 15%;
+  right: -160px;
+  animation: blobFloat 12s ease-in-out infinite alternate-reverse;
+}
+
+.shape-3 {
+  width: 320px;
+  height: 320px;
+  background: var(--clr-accent-3);
+  bottom: -100px;
+  left: 35%;
+  animation: blobFloat 9s ease-in-out infinite alternate;
+  animation-delay: -4s;
+}
+
+/* Phase badge */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.38rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 188, 212, 0.28);
+  background: rgba(0, 188, 212, 0.07);
+  color: var(--clr-accent-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  animation: fadeUp 0.55s var(--ease-out) both;
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clr-accent-2);
+  box-shadow: 0 0 8px var(--clr-accent-2);
+  animation: pulseDot 2.4s ease infinite;
+}
+
+/* Main heading */
+.hero-title {
+  font-size: clamp(2rem, 5.5vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  color: var(--clr-text);
+  animation: fadeUp 0.6s 0.08s var(--ease-out) both;
+}
+
+.gradient-text {
+  background: linear-gradient(100deg, var(--clr-accent-1) 10%, var(--clr-accent-2) 90%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtitle */
+.hero-subtitle {
+  font-size: clamp(1rem, 2.2vw, 1.2rem);
+  font-weight: 400;
+  color: var(--clr-text-muted);
+  line-height: 1.75;
+  animation: fadeUp 0.6s 0.16s var(--ease-out) both;
+}
+
+/* ============================================================
+   5. Hero Buttons
+   ============================================================ */
+
+/* Primary — Upload Documents */
+.btn-primary-custom {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, var(--clr-accent-1), var(--clr-accent-2));
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.85rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: opacity var(--transition-normal), transform var(--transition-normal),
+              box-shadow var(--transition-normal);
+  animation: fadeUp 0.6s 0.24s var(--ease-out) both;
+}
+
+.btn-primary-custom:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(92, 107, 192, 0.4);
+  color: #fff;
+}
+
+.btn-primary-custom:active {
+  transform: translateY(0);
+}
+
+/* Secondary — Start Chat */
+.btn-outline-custom {
+  display: inline-flex;
+  align-items: center;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--clr-text);
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.75rem 1.85rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-normal), background var(--transition-normal),
+              transform var(--transition-normal), box-shadow var(--transition-normal);
+  animation: fadeUp 0.6s 0.32s var(--ease-out) both;
+}
+
+.btn-outline-custom:hover {
+  border-color: var(--clr-accent-2);
+  background: rgba(0, 188, 212, 0.07);
+  color: var(--clr-text);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 188, 212, 0.15);
+}
+
+.btn-outline-custom:active {
+  transform: translateY(0);
+}
+
+/* ============================================================
+   6. Dashboard Cards
+   ============================================================ */
+.dashboard-section {
+  padding: var(--section-py) 0;
+  background: var(--clr-surface);
+  border-top: 1px solid var(--clr-border);
+}
+
+/* Individual card */
+.dashboard-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 2rem 1.75rem 1.75rem;
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-xl);
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--transition-slow),
+              border-color var(--transition-normal),
+              box-shadow var(--transition-slow);
+  cursor: default;
+}
+
+/* Subtle top-accent bar on hover */
+.dashboard-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: linear-gradient(90deg, var(--clr-accent-1), var(--clr-accent-2));
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(92, 107, 192, 0.3);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.45);
+}
+
+.dashboard-card:hover::after {
+  opacity: 1;
+}
+
+/* Icon wrapper — colour-coded per card */
+.card-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-md);
+  font-size: 1.6rem;
+  margin-bottom: 1.4rem;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+/* Documents — indigo */
+.card-icon--documents {
+  background: rgba(92, 107, 192, 0.14);
+  border-color: rgba(92, 107, 192, 0.25);
+  color: var(--clr-card-docs);
+}
+
+/* AI Assistant — cyan */
+.card-icon--ai {
+  background: rgba(38, 198, 218, 0.12);
+  border-color: rgba(38, 198, 218, 0.22);
+  color: var(--clr-card-ai);
+}
+
+/* Semantic Search — green */
+.card-icon--search {
+  background: rgba(102, 187, 106, 0.12);
+  border-color: rgba(102, 187, 106, 0.22);
+  color: var(--clr-card-search);
+}
+
+/* Analytics — amber */
+.card-icon--analytics {
+  background: rgba(255, 167, 38, 0.12);
+  border-color: rgba(255, 167, 38, 0.22);
+  color: var(--clr-card-analytics);
+}
+
+/* Card text */
+.card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--clr-text);
+  margin-bottom: 0.5rem;
+}
+
+.card-desc {
+  font-size: 0.875rem;
+  color: var(--clr-text-muted);
+  line-height: 1.65;
+  flex: 1;
+  margin-bottom: 1.25rem;
+}
+
+/* Status badge */
+.card-status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(114, 115, 140, 0.1);
+  border: 1px solid rgba(114, 115, 140, 0.2);
+  color: var(--clr-text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   7. Section Header
+   ============================================================ */
+.section-title {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--clr-text);
+  letter-spacing: -0.01em;
+}
+
+.section-sub {
+  font-size: 0.975rem;
+  color: var(--clr-text-muted);
+}
+
+/* ============================================================
+   8. Footer
+   ============================================================ */
+.ekip-footer {
+  padding: 2.25rem 0;
+  background: var(--clr-bg);
+  border-top: 1px solid var(--clr-border);
+}
+
+.footer-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+}
+
+.footer-brand-line {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--clr-text-muted);
+}
+
+.footer-brand {
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--clr-accent-1), var(--clr-accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.footer-tech-line {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--clr-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.footer-tech-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--clr-text-muted);
+}
+
+/* ============================================================
+   9. Utilities
+   ============================================================ */
+::selection {
+  background: rgba(92, 107, 192, 0.35);
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--clr-bg); }
+::-webkit-scrollbar-thumb {
+  background: var(--clr-surface-2);
+  border-radius: 3px;
+}
+
+/* ============================================================
+   10. Animations
+   ============================================================ */
+@keyframes blobFloat {
+  from { transform: translateY(0)   scale(1); }
+  to   { transform: translateY(-28px) scale(1.05); }
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 8px var(--clr-accent-2); }
+  50%       { opacity: 0.3; box-shadow: 0 0 4px var(--clr-accent-2); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   11. Responsive
+   ============================================================ */
+@media (max-width: 992px) {
+  .brand-name { max-width: 200px; }
+}
+
+@media (max-width: 768px) {
+  .hero-section { min-height: auto; padding: 4.5rem 0 3.5rem; }
+  .dashboard-section { padding: 3.5rem 0; }
+  .brand-name { font-size: 0.82rem; max-width: 160px; }
+}
+
+@media (max-width: 480px) {
+  .hero-title { font-size: 2rem; }
+  #heroActions { flex-direction: column; align-items: stretch; }
+  #heroActions .btn-primary-custom,
+  #heroActions .btn-outline-custom { justify-content: center; }
+}

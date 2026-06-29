@@ -1,0 +1,8 @@
+# prompts/system/.gitkeep
+# ------------------------
+# System-level prompt templates will be stored here.
+# These are top-level instructions that define the LLM's persona,
+# capabilities, and behavioural guardrails for the entire platform.
+# Example files (future phases):
+#   - base_system.txt          (default system prompt for all interactions)
+#   - strict_grounding.txt     (prompt variant that enforces citation-only answers)

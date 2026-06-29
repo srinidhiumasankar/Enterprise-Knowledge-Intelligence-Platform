@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+<!--
+  index.html
+  ----------
+  Phase 2 — Landing / Dashboard page.
+
+  Sections:
+    1. Hero         — title, subtitle, CTA buttons
+    2. Dashboard    — four feature cards
+-->
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+
+<!-- ======================================================================
+     1. Hero Section
+====================================================================== -->
+<section class="hero-section" id="hero" aria-labelledby="heroHeading">
+
+  <!-- Decorative ambient background blobs -->
+  <div class="hero-bg-shapes" aria-hidden="true">
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+  </div>
+
+  <div class="container position-relative">
+    <div class="row justify-content-center text-center">
+      <div class="col-lg-9 col-xl-8">
+
+        <!-- Phase badge -->
+        <div class="hero-badge mb-4" id="heroBadge" aria-label="Current phase">
+          <span class="badge-dot" aria-hidden="true"></span>
+          Phase 2 &mdash; Web Application Live
+        </div>
+
+        <!-- Primary heading -->
+        <h1 class="hero-title mb-3" id="heroHeading">
+          Enterprise Knowledge<br />
+          <span class="gradient-text">Intelligence Platform</span>
+        </h1>
+
+        <!-- Subtitle -->
+        <p class="hero-subtitle mb-5">
+          AI-powered Enterprise Document Intelligence using<br class="d-none d-md-block" />
+          Retrieval-Augmented Generation (RAG)
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="d-flex gap-3 justify-content-center flex-wrap" id="heroActions">
+
+          <!-- Primary CTA: Upload Documents -->
+          <button
+            class="btn btn-primary-custom btn-lg"
+            id="btnUpload"
+            type="button"
+            title="Document upload will be available in a future phase"
+            aria-disabled="true"
+          >
+            <i class="bi bi-cloud-upload me-2" aria-hidden="true"></i>
+            Upload Documents
+          </button>
+
+          <!-- Secondary CTA: Start Chat -->
+          <button
+            class="btn btn-outline-custom btn-lg"
+            id="btnChat"
+            type="button"
+            title="Chat interface will be available in a future phase"
+            aria-disabled="true"
+          >
+            <i class="bi bi-chat-dots me-2" aria-hidden="true"></i>
+            Start Chat
+          </button>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================
+     2. Dashboard Cards Section
+====================================================================== -->
+<section class="dashboard-section" id="dashboard" aria-labelledby="dashboardHeading">
+  <div class="container">
+
+    <div class="section-header text-center mb-5">
+      <h2 class="section-title" id="dashboardHeading">Platform Overview</h2>
+      <p class="section-sub">
+        Enterprise-grade AI capabilities for your document workflows
+      </p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+      <!-- Card 1: Documents -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="dashboard-card" id="cardDocuments" role="article">
+          <div class="card-icon-wrap card-icon--documents" aria-hidden="true">
+            <i class="bi bi-file-earmark-text-fill"></i>
+          </div>
+          <h3 class="card-title">Documents</h3>
+          <p class="card-desc">
+            Upload and manage enterprise documents.
+          </p>
+          <span class="card-status-badge">Coming Soon</span>
+        </div>
+      </div>
+
+      <!-- Card 2: AI Assistant -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="dashboard-card" id="cardAIAssistant" role="article">
+          <div class="card-icon-wrap card-icon--ai" aria-hidden="true">
+            <i class="bi bi-robot"></i>
+          </div>
+          <h3 class="card-title">AI Assistant</h3>
+          <p class="card-desc">
+            Ask natural language questions.
+          </p>
+          <span class="card-status-badge">Coming Soon</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Semantic Search -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="dashboard-card" id="cardSemanticSearch" role="article">
+          <div class="card-icon-wrap card-icon--search" aria-hidden="true">
+            <i class="bi bi-search"></i>
+          </div>
+          <h3 class="card-title">Semantic Search</h3>
+          <p class="card-desc">
+            Retrieve context using vector search.
+          </p>
+          <span class="card-status-badge">Coming Soon</span>
+        </div>
+      </div>
+
+      <!-- Card 4: Analytics -->
+      <div class="col-sm-6 col-lg-3">
+        <div class="dashboard-card" id="cardAnalytics" role="article">
+          <div class="card-icon-wrap card-icon--analytics" aria-hidden="true">
+            <i class="bi bi-bar-chart-fill"></i>
+          </div>
+          <h3 class="card-title">Analytics</h3>
+          <p class="card-desc">
+            Monitor system statistics.
+          </p>
+          <span class="card-status-badge">Coming Soon</span>
+        </div>
+      </div>
+
+    </div><!-- /.row -->
+  </div><!-- /.container -->
+</section>
+
+{% endblock %}

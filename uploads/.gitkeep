@@ -1,0 +1,4 @@
+# uploads/
+# --------
+# User-uploaded files will be stored here in future phases.
+# This file exists solely to ensure the uploads/ directory is tracked by Git.

@@ -1,0 +1,9 @@
+# prompts/summarization/.gitkeep
+# --------------------------------
+# Document summarization prompt templates will be stored here.
+# These templates instruct the LLM to produce concise, structured summaries
+# from full documents or retrieved chunks at various levels of detail.
+# Example files (future phases):
+#   - brief_summary.txt        (one-paragraph executive summary)
+#   - detailed_summary.txt     (section-by-section breakdown)
+#   - bullet_summary.txt       (key points in bullet format)

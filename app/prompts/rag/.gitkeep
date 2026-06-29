@@ -1,0 +1,9 @@
+# prompts/rag/.gitkeep
+# ---------------------
+# Retrieval-Augmented Generation prompt templates will be stored here.
+# These templates combine the user query with retrieved document chunks
+# and instruct the LLM to answer strictly from the provided context.
+# Example files (future phases):
+#   - rag_qa.txt               (standard RAG question-answer template)
+#   - rag_qa_with_citations.txt (variant that requires source citations)
+#   - rag_multi_hop.txt         (multi-step reasoning over multiple chunks)
