@@ -19,6 +19,8 @@ class VectorService:
     including client setup, vector insertion, deletion, and query operations.
     """
 
+    _client: Optional[chromadb.PersistentClient] = None
+
     def __init__(self, persist_directory: Optional[str] = None, collection_name: Optional[str] = None):
         """
         Initialize persistent ChromaDB client and retrieve or create the target collection.
@@ -37,20 +39,28 @@ class VectorService:
             logger.error(f"Failed to create persistent directory '{self.persist_directory}': {e}")
             raise RuntimeError(f"ChromaDB directory creation failed: {e}")
 
-        logger.info(f"Initializing persistent ChromaDB client at: '{self.persist_directory}'")
+        if VectorService._client is None:
+            logger.info(f"Initializing persistent ChromaDB client at: '{self.persist_directory}'")
+            try:
+                VectorService._client = chromadb.PersistentClient(
+                    path=self.persist_directory,
+                    settings=ChromaSettings(anonymized_telemetry=False)
+                )
+            except Exception as e:
+                logger.error(f"Failed to initialize ChromaDB client: {e}")
+                raise RuntimeError(f"ChromaDB client initialization failed: {e}")
+
+        self.client = VectorService._client
+
         try:
-            self.client = chromadb.PersistentClient(
-                path=self.persist_directory,
-                settings=ChromaSettings(anonymized_telemetry=False)
-            )
             # Create or get the collection
             self.collection = self.client.get_or_create_collection(
                 name=self.collection_name
             )
             logger.info(f"ChromaDB collection '{self.collection_name}' initialized successfully.")
         except Exception as e:
-            logger.error(f"Failed to initialize ChromaDB client/collection: {e}")
-            raise RuntimeError(f"ChromaDB initialization failed: {e}")
+            logger.error(f"Failed to initialize ChromaDB collection: {e}")
+            raise RuntimeError(f"ChromaDB collection initialization failed: {e}")
 
     def insert_vectors(
         self,
@@ -198,3 +208,65 @@ class VectorService:
                 "status": "unhealthy",
                 "error": str(e)
             }
+
+    def search_vectors(
+        self,
+        query_embedding: List[float],
+        limit: int,
+        user_id: int
+    ) -> Dict[str, Any]:
+        """
+        Search the collection for similar vectors, filtered by user_id.
+        """
+        try:
+            logger.info(f"Querying ChromaDB for user_id {user_id} with limit {limit}")
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=limit,
+                where={"user_id": user_id}
+            )
+            return results
+        except Exception as e:
+            logger.error(f"Failed to query vectors in ChromaDB: {e}")
+            raise RuntimeError(f"ChromaDB query failed: {e}")
+
+    def update_vectors(
+        self,
+        chunk_ids: List[str],
+        embeddings: List[List[float]],
+        texts: Optional[List[str]] = None,
+        metadatas: Optional[List[Dict[str, Any]]] = None
+    ) -> None:
+        """
+        Update existing vectors, embeddings, or metadata in ChromaDB.
+        """
+        if not chunk_ids:
+            logger.warning("Empty chunk list provided for update_vectors.")
+            return
+        try:
+            logger.info(f"Updating {len(chunk_ids)} vectors in ChromaDB collection '{self.collection_name}'")
+            self.collection.update(
+                ids=chunk_ids,
+                embeddings=embeddings,
+                metadatas=metadatas,
+                documents=texts
+            )
+            logger.info(f"Successfully updated vectors in ChromaDB.")
+        except Exception as e:
+            logger.error(f"Failed to update vectors in ChromaDB: {e}")
+            raise RuntimeError(f"ChromaDB update failed: {e}")
+
+    def delete_vectors(self, chunk_ids: List[str]) -> None:
+        """
+        Delete specific vectors from ChromaDB by their chunk IDs.
+        """
+        if not chunk_ids:
+            logger.warning("Empty chunk list provided for delete_vectors.")
+            return
+        try:
+            logger.info(f"Deleting {len(chunk_ids)} vectors from ChromaDB collection '{self.collection_name}'")
+            self.collection.delete(ids=chunk_ids)
+            logger.info(f"Successfully deleted vectors from ChromaDB.")
+        except Exception as e:
+            logger.error(f"Failed to delete vectors from ChromaDB: {e}")
+            raise RuntimeError(f"ChromaDB delete failed: {e}")

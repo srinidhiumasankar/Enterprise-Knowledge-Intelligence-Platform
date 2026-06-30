@@ -114,6 +114,24 @@ class ChunkService:
                 detail="Access denied to this document",
             )
 
+        # Check if chunks and embeddings already exist to prevent duplicate generation
+        existing_chunks = self.repository.get_document_chunks(document_id)
+        if existing_chunks and doc.status == "indexed":
+            try:
+                vectors = self.vector_service.fetch_vectors_by_document_id(document_id)
+                if vectors and vectors.get("ids"):
+                    logger.info(f"Embeddings already exist for document {document_id}. Skipping regeneration.")
+                    total_chunks = len(existing_chunks)
+                    total_chars = sum(c.character_count for c in existing_chunks)
+                    avg_size = int(total_chars / total_chunks) if total_chunks else 0
+                    return {
+                        "document_id": document_id,
+                        "total_chunks": total_chunks,
+                        "average_chunk_size": avg_size
+                    }
+            except Exception as e:
+                logger.warning(f"Error checking existing vectors for document {document_id}: {e}. Proceeding with regeneration.")
+
         # 1. Check if document has text
         processor = DocumentProcessorService(self.doc_repository)
         try:
@@ -163,6 +181,9 @@ class ChunkService:
             logger.info(f"Generating embeddings for {len(chunk_texts)} chunks of document_id: {document_id}")
             embeddings = self.embedding_service.embed_documents(chunk_texts)
 
+            # Enrich metadata with user_id to enforce user isolation during retrieval
+            metadatas = [{"user_id": owner_id} for _ in chunk_texts]
+
             logger.info(f"Storing embeddings in ChromaDB for document_id: {document_id}")
             self.vector_service.insert_vectors(
                 document_id=document_id,
@@ -170,6 +191,7 @@ class ChunkService:
                 chunk_indices=chunk_indices,
                 texts=chunk_texts,
                 embeddings=embeddings,
+                metadatas=metadatas,
             )
         except HTTPException as he:
             raise he

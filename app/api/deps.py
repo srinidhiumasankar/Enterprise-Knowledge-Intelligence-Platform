@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, UserRepository
 from app.models.user import User
-from app.services import VectorService
+from app.services import VectorService, RetrievalService
 from app.utils.security import decode_token
 
 # Setup logger
@@ -93,4 +93,14 @@ def get_vector_service() -> VectorService:
     Dependency generator for VectorService.
     """
     return VectorService()
+
+
+def get_retrieval_service(db: Session = Depends(get_db)) -> RetrievalService:
+    """
+    Dependency generator for RetrievalService.
+    """
+    from app.database.chunk_repository import ChunkRepository
+    return RetrievalService(
+        chunk_repository=ChunkRepository(db)
+    )
 

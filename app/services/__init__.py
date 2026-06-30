@@ -9,6 +9,7 @@ from app.services.document_processor import DocumentProcessorService
 from app.services.chunk_service import ChunkService
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_service import VectorService
+from app.services.retrieval_service import RetrievalService
 
 
 

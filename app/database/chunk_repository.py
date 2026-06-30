@@ -67,6 +67,16 @@ class ChunkRepository:
             .order_by(DocumentChunk.chunk_number.asc())
         ).all()
 
+    def get_chunks_by_uuids(self, uuids: list[str]) -> Sequence[DocumentChunk]:
+        """
+        Retrieve chunks matching a list of UUIDs.
+        """
+        if not uuids:
+            return []
+        return self.db.scalars(
+            select(DocumentChunk).where(DocumentChunk.uuid.in_(uuids))
+        ).all()
+
     def delete_document_chunks(self, document_id: int) -> None:
         """
         Delete all text chunks associated with a specific document ID.
