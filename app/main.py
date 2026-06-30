@@ -33,10 +33,12 @@ app = FastAPI(
 from app.api.auth import router as auth_router
 from app.api.upload import router as upload_router
 from app.api.search import router as search_router
+from app.api.debug import router as debug_router
 
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(search_router)
+app.include_router(debug_router)
 
 # ---------------------------------------------------------------------------
 # Static files — served at /static
