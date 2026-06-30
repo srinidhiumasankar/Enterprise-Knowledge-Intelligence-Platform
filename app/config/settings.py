@@ -38,11 +38,13 @@ class Settings(BaseSettings):
 
     # Vector Database Settings
     CHROMA_DB_DIR: str = "chroma_db"
+    CHROMA_DB_PATH: str = "./vector_store"
     CHROMA_COLLECTION: str = "document_chunks"
     CHROMA_COLLECTION_NAME: str = "document_chunks"
     
     # Search Settings
     TOP_K_DEFAULT: int = 5
+    TOP_K_RESULTS: int = 5
 
 
 settings = Settings()
