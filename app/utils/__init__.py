@@ -17,3 +17,15 @@ from app.utils.security import (
     verify_token,
     get_token_expiry,
 )
+from app.utils.file_utils import (
+    is_allowed_file,
+    ensure_upload_directories,
+    get_upload_path,
+    ALLOWED_EXTENSIONS,
+    MAX_FILE_SIZE_BYTES,
+)
+from app.utils.pdf_reader import read_pdf
+from app.utils.docx_reader import read_docx
+from app.utils.text_reader import read_text
+
+

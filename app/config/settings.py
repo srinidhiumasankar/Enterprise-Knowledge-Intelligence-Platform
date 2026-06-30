@@ -31,5 +31,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # Embedding Settings
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSION: int = 384
+
+    # Vector Database Settings
+    CHROMA_DB_DIR: str = "chroma_db"
+    CHROMA_COLLECTION_NAME: str = "document_chunks"
+
 
 settings = Settings()

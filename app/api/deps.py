@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import SessionLocal, UserRepository
 from app.models.user import User
+from app.services import VectorService
 from app.utils.security import decode_token
 
 # Setup logger
@@ -85,3 +86,11 @@ def get_current_active_user(
             detail="Inactive user",
         )
     return current_user
+
+
+def get_vector_service() -> VectorService:
+    """
+    Dependency generator for VectorService.
+    """
+    return VectorService()
+
