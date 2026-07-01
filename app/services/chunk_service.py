@@ -3,15 +3,15 @@
 # Business logic service layer for dividing document text into chunks and database persistence.
 
 import logging
-from typing import Sequence, Optional
+from typing import Sequence, Optional, Any
 from fastapi import HTTPException, status
 
 from app.database.chunk_repository import ChunkRepository
 from app.database import DocumentRepository
 from app.models.document_chunk import DocumentChunk
 from app.services.document_processor import DocumentProcessorService
-from app.services.embedding_service import EmbeddingService
-from app.services.vector_service import VectorService
+from app.embeddings.embedding_service import EmbeddingService
+from app.embeddings.chroma_service import ChromaService
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,8 @@ class ChunkService:
         chunk_repository: ChunkRepository,
         document_repository: DocumentRepository,
         embedding_service: Optional[EmbeddingService] = None,
-        vector_service: Optional[VectorService] = None,
+        chroma_service: Optional[ChromaService] = None,
+        vector_service: Optional[Any] = None,
     ):
         """
         Initialize the service with repository and service dependencies.
@@ -95,7 +96,7 @@ class ChunkService:
         self.repository = chunk_repository
         self.doc_repository = document_repository
         self.embedding_service = embedding_service or EmbeddingService()
-        self.vector_service = vector_service or VectorService()
+        self.chroma_service = chroma_service or ChromaService()
 
     def chunk_document(self, document_id: int, owner_id: int) -> dict:
         """
@@ -113,24 +114,6 @@ class ChunkService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied to this document",
             )
-
-        # Check if chunks and embeddings already exist to prevent duplicate generation
-        existing_chunks = self.repository.get_document_chunks(document_id)
-        if existing_chunks and doc.status == "indexed":
-            try:
-                vectors = self.vector_service.fetch_vectors_by_document_id(document_id)
-                if vectors and vectors.get("ids"):
-                    logger.info(f"Embeddings already exist for document {document_id}. Skipping regeneration.")
-                    total_chunks = len(existing_chunks)
-                    total_chars = sum(c.character_count for c in existing_chunks)
-                    avg_size = int(total_chars / total_chunks) if total_chunks else 0
-                    return {
-                        "document_id": document_id,
-                        "total_chunks": total_chunks,
-                        "average_chunk_size": avg_size
-                    }
-            except Exception as e:
-                logger.warning(f"Error checking existing vectors for document {document_id}: {e}. Proceeding with regeneration.")
 
         # 1. Check if document has text
         processor = DocumentProcessorService(self.doc_repository)
@@ -176,22 +159,31 @@ class ChunkService:
             db_chunks = self.repository.get_document_chunks(document_id)
             chunk_texts = [c.chunk_text for c in db_chunks]
             chunk_ids = [c.uuid for c in db_chunks]
-            chunk_indices = [c.chunk_number for c in db_chunks]
 
             logger.info(f"Generating embeddings for {len(chunk_texts)} chunks of document_id: {document_id}")
-            embeddings = self.embedding_service.embed_documents(chunk_texts)
+            embeddings = self.embedding_service.generate_batch_embeddings(chunk_texts)
 
-            # Enrich metadata with user_id to enforce user isolation during retrieval
-            metadatas = [{"user_id": owner_id} for _ in chunk_texts]
+            # Ensure any existing embeddings for this document in ChromaDB are deleted
+            logger.info(f"Purging existing ChromaDB embeddings for document_id: {document_id}")
+            self.chroma_service.delete_document(document_id)
+
+            # Enrich metadata with document_id, chunk_id, owner_id, and filename
+            metadatas = [
+                {
+                    "document_id": document_id,
+                    "chunk_id": c.uuid,
+                    "owner_id": owner_id,
+                    "filename": doc.filename
+                }
+                for c in db_chunks
+            ]
 
             logger.info(f"Storing embeddings in ChromaDB for document_id: {document_id}")
-            self.vector_service.insert_vectors(
-                document_id=document_id,
-                chunk_ids=chunk_ids,
-                chunk_indices=chunk_indices,
-                texts=chunk_texts,
+            self.chroma_service.add_documents(
+                ids=chunk_ids,
                 embeddings=embeddings,
                 metadatas=metadatas,
+                documents=chunk_texts,
             )
         except HTTPException as he:
             raise he

@@ -32,20 +32,62 @@ async def search_chunks(
     Generate query embedding, perform vector similarity search, filter by user ownership,
     and return ranked results.
     """
-    logger.info(f"User '{current_user.email}' requested semantic search for query '{request_data.query}' with top_k={request_data.top_k}")
+    query_str = request_data.query
+    logger.info(f"User '{current_user.email}' requested semantic search for query '{query_str}' with top_k={request_data.top_k}")
+    
+    # Reject empty or whitespace-only query
+    if not query_str or not query_str.strip():
+        logger.warning(f"Rejecting empty or whitespace search query from user '{current_user.email}'")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query cannot be empty or whitespace-only.",
+        )
+
     try:
         results = await retrieval_service.retrieve(
             user_id=current_user.id,
-            query=request_data.query,
+            query=query_str,
             top_k=request_data.top_k,
         )
+        
+        message = None
+        if not results:
+            message = "No relevant information found."
+
         return SearchResponse(
-            query=request_data.query,
+            query=query_str,
             results=results,
+            message=message
         )
+    except ValueError as ve:
+        logger.warning(f"Validation error in search for user '{current_user.email}': {ve}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(ve),
+        )
+    except RuntimeError as re:
+        error_msg = str(re).lower()
+        if "chromadb" in error_msg or "connection" in error_msg:
+            logger.error(f"ChromaDB connection unavailable during search: {re}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Vector storage service is temporarily unavailable.",
+            )
+        elif "embedding" in error_msg or "model" in error_msg:
+            logger.error(f"Embedding model failure during search: {re}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate query embeddings.",
+            )
+        else:
+            logger.error(f"Semantic search retrieval error: {re}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Semantic retrieval failed: {str(re)}",
+            )
     except Exception as e:
-        logger.error(f"Semantic search endpoint error for user '{current_user.email}': {e}", exc_info=True)
+        logger.error(f"Unexpected error in semantic search: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Semantic retrieval failed: {str(e)}",
+            detail=f"Unexpected retrieval error occurred: {str(e)}",
         )

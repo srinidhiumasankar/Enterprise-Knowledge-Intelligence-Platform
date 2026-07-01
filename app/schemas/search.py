@@ -3,7 +3,7 @@
 # Pydantic validation schemas for semantic search.
 
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 
 
 class SearchRequest(BaseModel):
@@ -22,6 +22,7 @@ class SearchResult(BaseModel):
     chunk_id: int = Field(..., description="Database primary ID of the chunk")
     score: float = Field(..., description="Similarity score calculated from distance")
     text: str = Field(..., description="Text content of the matching chunk")
+    metadata: dict = Field(..., description="Metadata dictionary containing chunk details")
 
 
 class SearchResponse(BaseModel):
@@ -30,3 +31,4 @@ class SearchResponse(BaseModel):
     """
     query: str = Field(..., description="The queried text")
     results: List[SearchResult] = Field(..., description="Ranked list of matching chunks")
+    message: Optional[str] = Field(default=None, description="Optional system message indicating search status")

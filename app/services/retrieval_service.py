@@ -8,8 +8,8 @@ from typing import Any, Dict, List, Optional
 
 from app.config import settings
 from app.database.chunk_repository import ChunkRepository
-from app.services.embedding_service import EmbeddingService
-from app.services.vector_service import VectorService
+from app.embeddings.embedding_service import EmbeddingService
+from app.embeddings.chroma_service import ChromaService
 
 logger = logging.getLogger(__name__)
 
@@ -26,40 +26,49 @@ class RetrievalService:
         self,
         chunk_repository: ChunkRepository,
         embedding_service: Optional[EmbeddingService] = None,
-        vector_service: Optional[VectorService] = None,
+        chroma_service: Optional[ChromaService] = None,
+        vector_service: Optional[Any] = None,
     ):
         self.chunk_repo = chunk_repository
         self.embedding_service = embedding_service or EmbeddingService()
-        self.vector_service = vector_service or VectorService()
+        self.chroma_service = chroma_service or ChromaService()
 
     async def retrieve(
         self,
         user_id: int,
         query: str,
-        top_k: int = 5
+        top_k: int = 5,
+        threshold: Optional[float] = None,
     ) -> List[Dict[str, Any]]:
         """
         Execute semantic search and return a ranked list of text chunks.
         Only retrieves chunks belonging to the specified user_id.
         """
         if not query or not query.strip():
-            logger.warning("Empty query string received for semantic search.")
-            return []
+            logger.warning("Empty or whitespace-only query string received for semantic search.")
+            raise ValueError("Search query cannot be empty or whitespace-only.")
 
         start_time = time.time()
         logger.info(f"Initiating semantic search for user_id={user_id}, query='{query}', top_k={top_k}")
 
+        if threshold is None:
+            from app.embeddings import config
+            threshold = getattr(config, "SIMILARITY_THRESHOLD", 0.45)
+
         try:
             # 1. Generate Query Embedding
             logger.info("Generating query embedding...")
-            query_embedding = self.embedding_service.embed_text(query)
+            query_embedding = self.embedding_service.generate_query_embedding(query)
 
-            # 2. Semantic Search in ChromaDB (user isolated)
-            logger.info(f"Searching ChromaDB collection with user_id filter={user_id}...")
-            search_results = self.vector_service.search_vectors(
+            # Retrieve a larger list to account for threshold filtering and deduplication
+            fetch_limit = max(top_k * 3, 20)
+
+            # 2. Semantic Search in ChromaDB (user isolated by owner_id)
+            logger.info(f"Searching ChromaDB collection with owner_id filter={user_id}, limit={fetch_limit}...")
+            search_results = self.chroma_service.similarity_search(
                 query_embedding=query_embedding,
-                limit=top_k,
-                user_id=user_id
+                n_results=fetch_limit,
+                where={"owner_id": user_id}
             )
 
             # Extract IDs, distances, documents, and metadatas
@@ -67,6 +76,9 @@ class RetrievalService:
             distances = search_results.get("distances", [[]])[0] if search_results.get("distances") else []
             documents = search_results.get("documents", [[]])[0] if search_results.get("documents") else []
             metadatas = search_results.get("metadatas", [[]])[0] if search_results.get("metadatas") else []
+
+            total_retrieved = len(ids)
+            logger.info(f"ChromaDB returned {total_retrieved} raw results.")
 
             if not ids:
                 logger.info(f"No semantic search results found for user_id={user_id}")
@@ -76,23 +88,25 @@ class RetrievalService:
             db_chunks = self.chunk_repo.get_chunks_by_uuids(ids)
             uuid_to_chunk_id = {chunk.uuid: chunk.id for chunk in db_chunks}
 
-            # 4. Rank and format results
+            # 4. Rank, filter and deduplicate results
             ranked_results = []
+            seen_texts = set()
+            seen_chunk_ids = set()
+            filtered_count = 0
+
             for idx, chunk_uuid in enumerate(ids):
-                # Retrieve db primary key
                 db_chunk_id = uuid_to_chunk_id.get(chunk_uuid)
                 if db_chunk_id is None:
                     logger.warning(f"Chunk UUID '{chunk_uuid}' exists in ChromaDB but was not found in SQL database.")
                     continue
 
                 distance = distances[idx]
-                doc_id = metadatas[idx].get("document_id")
+                meta = metadatas[idx]
+                doc_id = meta.get("document_id")
                 chunk_text = documents[idx]
 
                 # Convert L2 distance to similarity score
-                # ChromaDB defaults to L2 distance where similarity = 1.0 / (1.0 + distance)
-                # Cosine distance similarity = 1.0 - distance
-                coll_metadata = getattr(self.vector_service.collection, "metadata", None) or {}
+                coll_metadata = getattr(self.chroma_service.collection, "metadata", None) or {}
                 hnsw_space = coll_metadata.get("hnsw:space", "l2")
                 if hnsw_space == "cosine":
                     score = 1.0 - distance
@@ -103,18 +117,45 @@ class RetrievalService:
                 score = max(0.0, min(1.0, score))
                 score = round(score, 4)
 
+                # Filter out below threshold
+                if score < threshold:
+                    filtered_count += 1
+                    continue
+
+                # Deduplicate based on text content and database ID
+                cleaned_text_lower = chunk_text.strip().lower()
+                if cleaned_text_lower in seen_texts or db_chunk_id in seen_chunk_ids:
+                    continue
+
+                seen_texts.add(cleaned_text_lower)
+                seen_chunk_ids.add(db_chunk_id)
+
                 ranked_results.append({
                     "document_id": doc_id,
                     "chunk_id": db_chunk_id,
                     "score": score,
-                    "text": chunk_text
+                    "text": chunk_text,
+                    "metadata": {
+                        "document_id": doc_id,
+                        "chunk_id": chunk_uuid,
+                        "owner_id": meta.get("owner_id"),
+                        "filename": meta.get("filename")
+                    }
                 })
+
+                if len(ranked_results) >= top_k:
+                    break
 
             # Sort by score in descending order
             ranked_results.sort(key=lambda x: x["score"], reverse=True)
 
-            retrieval_time = (time.time() - start_time) * 1000
-            logger.info(f"Semantic search completed in {retrieval_time:.2f}ms. Returned {len(ranked_results)} results.")
+            execution_time_ms = (time.time() - start_time) * 1000
+            logger.info(
+                f"Search completed. Query: '{query}'. "
+                f"Retrieved: {total_retrieved} raw chunks, Filtered: {filtered_count} under threshold, "
+                f"Returned: {len(ranked_results)} unique ranked chunks. "
+                f"Execution time: {execution_time_ms:.2f}ms."
+            )
             return ranked_results
 
         except Exception as e:

@@ -32,9 +32,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Embedding Settings
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
-    EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
-    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_MODEL: str = "BAAI/bge-base-en-v1.5"
+    EMBEDDING_MODEL_NAME: str = "BAAI/bge-base-en-v1.5"
+    EMBEDDING_DIMENSION: int = 768
 
     # Vector Database Settings
     CHROMA_DB_DIR: str = "chroma_db"
@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     # Search Settings
     TOP_K_DEFAULT: int = 5
     TOP_K_RESULTS: int = 5
+    DEFAULT_TOP_K: int = 5
+    SIMILARITY_THRESHOLD: float = 0.55
 
 
 settings = Settings()

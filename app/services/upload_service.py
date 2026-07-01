@@ -161,9 +161,9 @@ class UploadService:
 
         # 1.5. Delete vectors from ChromaDB
         try:
-            from app.services.vector_service import VectorService
-            vector_service = VectorService()
-            vector_service.delete_vectors_by_document_id(document_id)
+            from app.embeddings.chroma_service import ChromaService
+            chroma_service = ChromaService()
+            chroma_service.delete_document(document_id)
         except Exception as e:
             logger.error(f"Error cleaning up ChromaDB vectors for document_id {document_id}: {e}")
 

@@ -4,3 +4,4 @@
 
 from app.embeddings.embedding_service import EmbeddingService
 from app.embeddings.chroma_service import ChromaService
+from app.embeddings.vector_store_service import VectorStoreService
