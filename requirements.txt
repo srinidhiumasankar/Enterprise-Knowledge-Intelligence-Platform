@@ -30,3 +30,7 @@ torch==2.12.1
 transformers==5.12.1
 numpy==2.4.6
 google-genai>=0.2.0
+langchain
+langchain-core
+langchain-community
+langchain-google-genai

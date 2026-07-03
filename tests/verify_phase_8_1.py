@@ -1,94 +1,79 @@
 # tests/verify_phase_8_1.py
 # -------------------------
-# Verification script for Phase 8.1: Frontend Authentication Module.
-# Tests that page-rendering routes are registered and static assets are accessible.
+# Verification script for Phase 8.1 (LangChain Foundation).
+# Initializes the LangChain LLM wrapper and invokes it with a simple prompt.
 
 import os
 import sys
 import logging
-from fastapi.testclient import TestClient
 
-# Add workspace directory to sys.path
+# Add workspace directory to sys.path to ensure local app imports work correctly
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.main import app
+from app.services.langchain import get_llm, get_embeddings, create_basic_chain
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+# Configure lightweight logging for verification
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("verify_phase_8_1")
 
 
-def test_html_pages_rendering():
+def verify_langchain_setup():
     """
-    Verify that frontend HTML view endpoints are registered and respond with 200 OK.
+    Verifies the LangChain foundation layer components:
+    1. Loads environmental configurations (API Key)
+    2. Initializes LLM using the get_llm() dependency
+    3. Invokes the model with a simple prompt
+    4. Initializes embeddings using get_embeddings()
+    5. Construct and runs a basic LCEL chain
     """
-    logger.info("Verifying frontend page-rendering endpoints...")
-    client = TestClient(app)
-
-    # 1. Test Login page
-    logger.info("  Testing GET /login...")
-    res_login = client.get("/login")
-    assert res_login.status_code == 200, f"Failed loading login page: {res_login.status_code}"
-    assert "Sign In - Enterprise Knowledge" in res_login.text, "Login page missing custom title tag context"
-    assert "auth.redirectIfLoggedIn()" in res_login.text, "Login page missing login state redirects script"
-    logger.info("  ✓ Login page loaded successfully.")
-
-    # 2. Test Register page
-    logger.info("  Testing GET /register...")
-    res_register = client.get("/register")
-    assert res_register.status_code == 200, f"Failed loading register page: {res_register.status_code}"
-    assert "Register - Enterprise Knowledge" in res_register.text, "Register page missing custom title tag context"
-    assert "strengthBar" in res_register.text, "Register page missing strengthBar progress bar"
-    logger.info("  ✓ Register page loaded successfully.")
-
-    # 3. Test Landing page / Dashboard page
-    logger.info("  Testing GET /...")
-    res_dashboard = client.get("/")
-    assert res_dashboard.status_code == 200, f"Failed loading dashboard: {res_dashboard.status_code}"
-    assert "auth.protectRoute()" in res_dashboard.text, "Dashboard page missing route protection script"
-    logger.info("  ✓ Dashboard page loaded successfully.")
-
-
-def test_static_js_assets():
-    """
-    Verify that static JS libraries exist and are accessible from static URLs.
-    """
-    logger.info("Verifying static JS assets availability...")
-    client = TestClient(app)
-
-    # 1. Verify api.js
-    logger.info("  Testing GET /static/js/api.js...")
-    res_api = client.get("/static/js/api.js")
-    assert res_api.status_code == 200, f"Static js/api.js missing: {res_api.status_code}"
-    assert "const api = {" in res_api.text, "Static js/api.js does not contain central api object"
-    logger.info("  ✓ Centralized api.js utility library verified.")
-
-    # 2. Verify auth.js
-    logger.info("  Testing GET /static/js/auth.js...")
-    res_auth = client.get("/static/js/auth.js")
-    assert res_auth.status_code == 200, f"Static js/auth.js missing: {res_auth.status_code}"
-    assert "const auth = {" in res_auth.text, "Static js/auth.js does not contain central auth object"
-    logger.info("  ✓ Authentication auth.js utility library verified.")
-
-
-def run_all_tests():
     logger.info("==========================================================")
-    logger.info("STARTING PHASE 8.1 AUTHENTICATION MODULE VERIFICATION")
+    logger.info("STARTING PHASE 8.1 LANGCHAIN FOUNDATION VERIFICATION")
     logger.info("==========================================================")
 
-    test_html_pages_rendering()
-    test_static_js_assets()
+    # 1. Initialize LangChain LLM wrapper
+    logger.info("Initializing LangChain LLM wrapper...")
+    llm = get_llm()
+    logger.info(f"✓ ChatGoogleGenerativeAI successfully initialized: {llm}")
 
-    logger.info("\n==========================================================")
-    logger.info("ALL PHASE 8.1 AUTHENTICATION VERIFICATION TESTS PASSED!")
+    # 2. Send a simple prompt directly
+    prompt_text = "Say Hello from LangChain"
+    logger.info(f"Sending prompt to LLM: '{prompt_text}'...")
+    try:
+        response = llm.invoke(prompt_text)
+        logger.info("✓ Prompt execution succeeded.")
+        print("\n--- LLM Direct Response ---")
+        print(response.content)
+        print("----------------------------\n")
+    except Exception as e:
+        logger.error(f"❌ Failed during direct LLM invocation: {e}", exc_info=True)
+        sys.exit(1)
+
+    # 3. Initialize Embeddings wrapper
+    logger.info("Initializing LangChain Embeddings wrapper...")
+    try:
+        embeddings = get_embeddings()
+        logger.info(f"✓ GoogleGenerativeAIEmbeddings successfully initialized: {embeddings}")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize Embeddings: {e}", exc_info=True)
+        sys.exit(1)
+
+    # 4. Construct and invoke basic chain
+    logger.info("Constructing and testing basic LCEL chain...")
+    try:
+        chain = create_basic_chain()
+        chain_res = chain.invoke({"instruction": "confirm LangChain LCEL chain works!"})
+        logger.info("✓ LCEL basic chain execution succeeded.")
+        print("\n--- LCEL Chain Response ---")
+        print(chain_res)
+        print("---------------------------\n")
+    except Exception as e:
+        logger.error(f"❌ Failed during LCEL chain invocation: {e}", exc_info=True)
+        sys.exit(1)
+
+    logger.info("==========================================================")
+    logger.info("ALL PHASE 8.1 LANGCHAIN FOUNDATION VERIFICATION PASSED!")
     logger.info("==========================================================")
 
 
 if __name__ == "__main__":
-    try:
-        run_all_tests()
-    except AssertionError as ae:
-        logger.error(f"Assertion failed: {ae}")
-        sys.exit(1)
-    except Exception as ex:
-        logger.error(f"Test run encountered unexpected error: {ex}", exc_info=True)
-        sys.exit(1)
+    verify_langchain_setup()
