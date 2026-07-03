@@ -12,6 +12,7 @@ from app.services.langchain.retriever import get_retriever
 from app.services.langchain.hybrid_retriever import get_hybrid_retriever
 from app.services.langchain.multi_query import get_multi_query_retriever
 from app.services.langchain.compression import CompressionRetriever, LLMBulkDocumentCompressor
+from app.services.langchain.parent_retriever import CustomParentDocumentRetriever, ParentRetriever
 
 __all__ = [
     "get_llm",
@@ -30,4 +31,6 @@ __all__ = [
     "get_multi_query_retriever",
     "CompressionRetriever",
     "LLMBulkDocumentCompressor",
+    "CustomParentDocumentRetriever",
+    "ParentRetriever",
 ]
