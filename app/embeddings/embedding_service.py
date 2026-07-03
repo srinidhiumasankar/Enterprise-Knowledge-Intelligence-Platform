@@ -1,44 +1,51 @@
 # app/embeddings/embedding_service.py
 # ------------------------------------
-# Infrastructure layer for vector embedding generation.
+# Infrastructure layer for vector embedding generation using LangChain Google GenAI embeddings.
 
 import logging
 from typing import List, Dict, Any, Optional
-from sentence_transformers import SentenceTransformer
 from app.config import settings
+from app.services.langchain import get_embeddings
 
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
     """
-    Service class for initializing the sentence-transformers embedding model
+    Service class for initializing the LangChain Google GenAI embedding model
     and generating text embeddings. Follows the singleton pattern for model loading.
     """
 
-    _model: Optional[SentenceTransformer] = None
+    _model: Optional[Any] = None
 
-    @classmethod
-    def get_model(cls) -> SentenceTransformer:
+    def __init__(self) -> None:
         """
-        Retrieve the loaded SentenceTransformer model instance.
-        Lazy-loads the model weights on first call.
+        Initialize the EmbeddingService instance.
         """
-        if cls._model is None:
-            logger.info(f"Loading SentenceTransformer model: '{settings.EMBEDDING_MODEL_NAME}'")
+        self.initialize()
+
+    def initialize(self) -> None:
+        """
+        Setup the LangChain Google GenAI embeddings using configuration settings.
+        Lazy-loads the embedding wrapper on first call or checks cached instance.
+        """
+        if EmbeddingService._model is None:
+            logger.info("Initializing LangChain embeddings service...")
             try:
-                cls._model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-                logger.info("SentenceTransformer model loaded successfully.")
+                # Reuse cached embedding instance from Phase 8.1
+                EmbeddingService._model = get_embeddings()
+                logger.info("LangChain embeddings service initialized successfully.")
             except Exception as e:
-                logger.error(f"Failed to load SentenceTransformer model '{settings.EMBEDDING_MODEL_NAME}': {e}")
-                raise RuntimeError(f"Could not initialize embedding model: {e}")
-        return cls._model
+                logger.error(f"Failed to initialize LangChain Google GenAI embeddings: {e}", exc_info=True)
+                raise RuntimeError(f"Embedding service initialization failed: {e}") from e
+        
+        self.model = EmbeddingService._model
 
     def load_model(self) -> None:
         """
-        Explicitly load the embedding model weights if not already loaded.
+        Explicitly load the embedding model if not already loaded.
         """
-        self.get_model()
+        self.initialize()
 
     def generate_embedding(self, text: str) -> List[float]:
         """
@@ -54,13 +61,17 @@ class EmbeddingService:
             logger.error("Empty or whitespace-only text passed to generate_embedding.")
             raise ValueError("Text input cannot be empty or whitespace-only.")
 
+        self.initialize()
+        logger.info("Generating embedding for 1 chunk...")
         try:
-            model = self.get_model()
-            embedding = model.encode(text)
-            return embedding.tolist()
+            embedding = self.model.embed_query(text)
+            if not embedding:
+                raise RuntimeError("Underlying embedding provider returned empty result.")
+            logger.info("Embedding generation completed.")
+            return embedding
         except Exception as e:
-            logger.error(f"Error generating embedding: {e}")
-            raise RuntimeError(f"Embedding generation failed: {e}")
+            logger.error(f"Error generating embedding: {e}", exc_info=True)
+            raise RuntimeError(f"Embedding generation failed: {e}") from e
 
     def generate_batch_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -73,21 +84,26 @@ class EmbeddingService:
             List[List[float]]: A list of generated embedding vectors.
         """
         if not texts:
+            logger.warning("Empty text list passed to generate_batch_embeddings. Returning empty list.")
             return []
 
         # Validate inputs
         for i, text in enumerate(texts):
             if not text or not text.strip():
-                logger.error(f"Empty text found at index {i} in generate_batch_embeddings.")
+                logger.error(f"Empty or whitespace-only text found at index {i} in generate_batch_embeddings.")
                 raise ValueError(f"Text at index {i} cannot be empty or whitespace-only.")
 
+        self.initialize()
+        logger.info(f"Generating embeddings for {len(texts)} chunks...")
         try:
-            model = self.get_model()
-            embeddings = model.encode(texts)
-            return embeddings.tolist()
+            embeddings = self.model.embed_documents(texts)
+            if not embeddings or len(embeddings) != len(texts):
+                raise RuntimeError("Underlying embedding provider returned mismatched or empty results.")
+            logger.info("Embedding generation completed.")
+            return embeddings
         except Exception as e:
-            logger.error(f"Error generating batch embeddings: {e}")
-            raise RuntimeError(f"Batch embedding generation failed: {e}")
+            logger.error(f"Error generating batch embeddings: {e}", exc_info=True)
+            raise RuntimeError(f"Batch embedding generation failed: {e}") from e
 
     def generate_query_embedding(self, query: str) -> List[float]:
         """
@@ -113,7 +129,8 @@ class EmbeddingService:
             Dict[str, Any]: Health status dictionary.
         """
         try:
-            model_loaded = self._model is not None
+            self.initialize()
+            model_loaded = self.model is not None
             status_str = "healthy" if model_loaded else "uninitialized"
             return {
                 "status": status_str,

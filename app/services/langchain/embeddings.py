@@ -27,13 +27,14 @@ def _get_cached_embeddings(model_name: str) -> GoogleGenerativeAIEmbeddings:
         return GoogleGenerativeAIEmbeddings(
             model=model_name,
             google_api_key=api_key,
+            output_dimensionality=768,
         )
     except Exception as e:
         logger.error(f"Failed to instantiate GoogleGenerativeAIEmbeddings: {e}", exc_info=True)
         raise RuntimeError(f"Could not load Gemini Embeddings model: {e}") from e
 
 
-def get_embeddings(model_name: str = "models/text-embedding-004") -> GoogleGenerativeAIEmbeddings:
+def get_embeddings(model_name: str = "models/gemini-embedding-001") -> GoogleGenerativeAIEmbeddings:
     """
     Get a configured and cached GoogleGenerativeAIEmbeddings instance.
 
@@ -42,7 +43,7 @@ def get_embeddings(model_name: str = "models/text-embedding-004") -> GoogleGener
         without recreating it repeatedly throughout the request lifecycles.
 
     Parameters:
-        model_name (str): The name of the embedding model to use. Defaults to "models/text-embedding-004".
+        model_name (str): The name of the embedding model to use. Defaults to "models/gemini-embedding-001".
 
     Returns:
         GoogleGenerativeAIEmbeddings: The cached or newly initialized Gemini Embeddings wrapper.

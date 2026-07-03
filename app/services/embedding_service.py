@@ -1,38 +1,31 @@
 # app/services/embedding_service.py
 # ---------------------------------
-# Service layer for sentence embedding generation using Hugging Face SentenceTransformers.
+# Service layer for sentence embedding generation using LangChain Google GenAI embeddings.
 
 import logging
-from typing import List, Union
-from sentence_transformers import SentenceTransformer
-
+from typing import List
 from app.config import settings
+from app.services.langchain import get_embeddings
 
 logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
     """
-    Embedding generation service using Hugging Face sentence-transformers.
-    Follows a lazy-loading singleton pattern for the model to minimize memory overhead.
+    Embedding generation service using LangChain's Google GenAI embeddings.
+    Provides standard helper functions to embed text and documents.
     """
 
-    _model: Union[SentenceTransformer, None] = None
-
-    @classmethod
-    def get_model(cls) -> SentenceTransformer:
+    def __init__(self) -> None:
         """
-        Retrieve the SentenceTransformer model instance (lazy loads on first call).
+        Initialize the EmbeddingService.
         """
-        if cls._model is None:
-            logger.info(f"Loading SentenceTransformer model: '{settings.EMBEDDING_MODEL_NAME}'")
-            try:
-                cls._model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-                logger.info("SentenceTransformer model loaded successfully.")
-            except Exception as e:
-                logger.error(f"Failed to load SentenceTransformer model '{settings.EMBEDDING_MODEL_NAME}': {e}")
-                raise RuntimeError(f"Could not initialize embedding model: {e}")
-        return cls._model
+        logger.info("Initializing LangChain embedding service wrapper...")
+        try:
+            self.model = get_embeddings()
+        except Exception as e:
+            logger.error(f"Failed to initialize LangChain embeddings model: {e}", exc_info=True)
+            raise RuntimeError(f"Could not initialize embedding model: {e}") from e
 
     def embed_text(self, text: str) -> List[float]:
         """
@@ -44,13 +37,14 @@ class EmbeddingService:
             logger.warning("Empty text passed to embed_text. Returning zero-vector.")
             return [0.0] * settings.EMBEDDING_DIMENSION
 
+        logger.info("Generating embedding for 1 chunk...")
         try:
-            model = self.get_model()
-            embedding = model.encode(text)
-            return embedding.tolist()
+            embedding = self.model.embed_query(text)
+            logger.info("Embedding generation completed.")
+            return embedding
         except Exception as e:
-            logger.error(f"Error generating embedding for text: {e}")
-            raise RuntimeError(f"Embedding generation failed: {e}")
+            logger.error(f"Error generating embedding for text: {e}", exc_info=True)
+            raise RuntimeError(f"Embedding generation failed: {e}") from e
 
     def embed_documents(self, list_of_chunks: List[str]) -> List[List[float]]:
         """
@@ -75,16 +69,16 @@ class EmbeddingService:
                 indices_to_embed.append(idx)
 
         if texts_to_embed:
+            logger.info(f"Generating batch embeddings for {len(texts_to_embed)} chunks...")
             try:
-                model = self.get_model()
-                encoded_embeddings = model.encode(texts_to_embed)
-                list_embeddings = encoded_embeddings.tolist()
+                list_embeddings = self.model.embed_documents(texts_to_embed)
+                logger.info("Embedding generation completed.")
                 
                 for embed, original_idx in zip(list_embeddings, indices_to_embed):
                     embeddings[original_idx] = embed
             except Exception as e:
-                logger.error(f"Error generating embeddings for document chunks: {e}")
-                raise RuntimeError(f"Bulk embedding generation failed: {e}")
+                logger.error(f"Error generating embeddings for document chunks: {e}", exc_info=True)
+                raise RuntimeError(f"Bulk embedding generation failed: {e}") from e
 
         final_embeddings = [
             emb if emb is not None else [0.0] * settings.EMBEDDING_DIMENSION
