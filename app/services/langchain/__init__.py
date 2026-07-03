@@ -11,6 +11,7 @@ from app.services.langchain.citations import create_citation_rag_chain, create_c
 from app.services.langchain.retriever import get_retriever
 from app.services.langchain.hybrid_retriever import get_hybrid_retriever
 from app.services.langchain.multi_query import get_multi_query_retriever
+from app.services.langchain.compression import CompressionRetriever, LLMBulkDocumentCompressor
 
 __all__ = [
     "get_llm",
@@ -27,4 +28,6 @@ __all__ = [
     "get_retriever",
     "get_hybrid_retriever",
     "get_multi_query_retriever",
+    "CompressionRetriever",
+    "LLMBulkDocumentCompressor",
 ]
