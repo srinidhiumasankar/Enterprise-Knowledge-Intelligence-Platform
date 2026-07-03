@@ -21,7 +21,7 @@ QA_PROMPT = PromptTemplate(
         "=== STRICT CONSTRAINTS ===\n"
         "1. Answer the question relying ONLY on the facts directly mentioned in the provided context blocks.\n"
         "2. Do NOT extrapolate, assume, or integrate outside knowledge. If the answer is not explicitly present in the context, "
-        "you MUST state exactly: 'I cannot determine the answer from the uploaded documents.'\n"
+        "you MUST state exactly: 'Insufficient information found in uploaded documents.'\n"
         "3. Keep the response concise but complete.\n"
         "4. Preserve all technical terms, exact numbers, and nomenclature as they appear in the source.\n\n"
         "=== PROVIDED CONTEXT ===\n"
