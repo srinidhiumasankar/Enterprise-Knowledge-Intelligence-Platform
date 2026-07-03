@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+<!--
+  dashboard.html
+  --------------
+  Dashboard base layout template for the Enterprise Knowledge Intelligence Platform.
+  Removes default landing page header/footer, loads layout resources, and constructs the app container shell.
+-->
+
+{% block extra_head %}
+<!-- Dashboard layouts custom styles -->
+<link rel="stylesheet" href="{{ url_for('static', path='css/layout.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', path='css/sidebar.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', path='css/topbar.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}" />
+{% block dashboard_extra_head %}{% endblock %}
+{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block content %}
+<div class="app-container">
+  <!-- Sidebar Panel -->
+  {% include "partials/sidebar.html" %}
+
+  <!-- Main View Area -->
+  <div class="main-wrapper d-flex flex-column">
+    <!-- Top Navigation Bar -->
+    {% include "partials/topbar.html" %}
+
+    <!-- Scrollable main dashboard content container -->
+    <main class="content-wrapper flex-grow-1" id="dashboardMainArea">
+      {% block dashboard_content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% endblock %}
+
+{% block extra_scripts %}
+<!-- Dashboard layouts scripts -->
+<script src="{{ url_for('static', path='js/navigation.js') }}"></script>
+<script src="{{ url_for('static', path='js/sidebar.js') }}"></script>
+<script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
+{% block dashboard_extra_scripts %}{% endblock %}
+{% endblock %}

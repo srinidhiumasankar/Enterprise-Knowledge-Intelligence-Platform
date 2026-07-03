@@ -11,7 +11,7 @@ Configures:
     - Root route  GET /  → renders templates/index.html
 """
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -61,16 +61,44 @@ templates = Jinja2Templates(directory="app/templates")
 # ---------------------------------------------------------------------------
 
 
-@app.get("/", response_class=HTMLResponse)
-async def root(request: Request) -> HTMLResponse:
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root(request: Request):
     """
-    Render the landing page / dashboard.
+    Render the landing page.
 
-    Returns:
-        HTMLResponse: Rendered index.html template.
+    GET  -> Returns the HTML page.
+    HEAD -> Returns only HTTP headers.
     """
+
+    if request.method == "HEAD":
+        return Response(status_code=200)
+
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={"title": "Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request) -> HTMLResponse:
+    """
+    Render the Login page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"title": "Sign In - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request) -> HTMLResponse:
+    """
+    Render the Registration page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="register.html",
+        context={"title": "Register - Enterprise Knowledge Intelligence Platform"},
     )

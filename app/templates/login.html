@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In - Enterprise Knowledge Intelligence Platform{% endblock %}
+
+{% block body_class %}auth-body{% endblock %}
+
+{% block extra_head %}
+<script>
+  (async () => {
+    // Redirect to dashboard immediately if already authenticated
+    await auth.redirectIfLoggedIn();
+  })();
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center flex-grow-1 py-5 animate-fade-in">
+  <div class="card glass-card border-0 rounded-4 shadow-lg">
+    <div class="card-body p-4 p-md-5">
+      
+      <!-- Brand / Logo Header -->
+      <div class="text-center mb-4">
+        <div class="auth-icon-wrapper mb-3 mx-auto">
+          <i class="bi bi-shield-lock-fill fs-2"></i>
+        </div>
+        <h4 class="fw-bold text-white mb-1">Welcome Back</h4>
+        <p class="text-muted small">Sign in to manage your enterprise knowledge bases</p>
+      </div>
+
+      <!-- Alert placeholder -->
+      <div id="loginAlert" class="notification-card notification-card--danger d-none animate-fade-in" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span id="loginAlertText"></span>
+        <button type="button" class="btn-close-custom" onclick="document.getElementById('loginAlert').classList.add('d-none')" aria-label="Close">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" novalidate>
+        <!-- Email Input -->
+        <div class="mb-4">
+          <label for="loginEmail" class="form-label small fw-semibold text-muted mb-2">Email Address</label>
+          <div class="auth-input-group">
+            <input 
+              type="email" 
+              id="loginEmail" 
+              class="form-control" 
+              placeholder="name@company.com" 
+              required
+              autocomplete="email"
+              aria-label="Email Address"
+            />
+            <i class="bi bi-envelope input-icon"></i>
+            <div class="invalid-feedback">Please enter a valid email address.</div>
+          </div>
+        </div>
+
+        <!-- Password Input -->
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label for="loginPassword" class="form-label small fw-semibold text-muted mb-0">Password</label>
+            <a href="#" class="text-primary small text-decoration-none fw-medium" onclick="event.preventDefault(); window.showToast('Password recovery is not implemented in this phase.', 'warning');">Forgot password?</a>
+          </div>
+          <div class="auth-input-group">
+            <input 
+              type="password" 
+              id="loginPassword" 
+              class="form-control" 
+              placeholder="••••••••" 
+              required
+              autocomplete="current-password"
+              aria-label="Password"
+            />
+            <i class="bi bi-lock input-icon"></i>
+            <div class="invalid-feedback">Password is required.</div>
+          </div>
+        </div>
+
+        <!-- Remember Me Checkbox -->
+        <div class="mb-4">
+          <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="rememberMe" />
+            <label class="form-check-label small text-muted user-select-none" for="rememberMe">Remember me</label>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnLogin" class="btn btn-premium w-100 fw-semibold d-flex justify-content-center align-items-center gap-2">
+          <span>Sign In</span>
+          <span class="spinner-border spinner-border-sm d-none" id="btnSpinner" role="status" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <!-- Registration Redirect -->
+      <div class="text-center mt-4">
+        <p class="small text-muted mb-0">
+          New to EKIP? <a href="/register" class="text-primary fw-semibold text-decoration-none">Create an account</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<!-- Footer removed on auth pages as per Phase 8.1 UI Enhancement specs -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    // Check if redirect query exists (e.g. from protecting route) or expired flag
+    const urlParams = new URLSearchParams(window.location.search);
+    const alertDiv = document.getElementById("loginAlert");
+    const alertText = document.getElementById("loginAlertText");
+
+    if (urlParams.get("expired")) {
+      alertDiv.className = "notification-card notification-card--warning animate-fade-in";
+      alertDiv.querySelector("i").className = "bi bi-exclamation-circle-fill";
+      alertText.textContent = "Your session has expired. Please sign in again.";
+      alertDiv.classList.remove("d-none");
+    }
+
+    const form = document.getElementById("loginForm");
+    const btn = document.getElementById("btnLogin");
+    const spinner = document.getElementById("btnSpinner");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      // Reset validation and alerts
+      form.classList.remove("was-validated");
+      alertDiv.classList.add("d-none");
+
+      if (!form.checkValidity()) {
+        form.classList.add("was-validated");
+        return;
+      }
+
+      const email = document.getElementById("loginEmail").value.trim();
+      const password = document.getElementById("loginPassword").value;
+
+      // Set loading state
+      btn.disabled = true;
+      spinner.classList.remove("d-none");
+
+      try {
+        await auth.login(email, password);
+        // Verify the newly acquired JWT token
+        await api.get("/api/auth/me");
+        
+        window.showToast("Login successful! Redirecting...", "success");
+        
+        // Check if there is a redirect parameter
+        const redirectUrl = urlParams.get("redirect") || "/";
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 1000);
+      } catch (err) {
+        // Show error alert
+        alertDiv.className = "notification-card notification-card--danger animate-fade-in";
+        alertDiv.querySelector("i").className = "bi bi-exclamation-triangle-fill";
+        alertText.textContent = err.message || "Failed to authenticate. Please check your credentials.";
+        alertDiv.classList.remove("d-none");
+        window.showToast(err.message || "Authentication failed.", "danger");
+      } finally {
+        // Always stop loading in finally block
+        btn.disabled = false;
+        spinner.classList.add("d-none");
+      }
+    });
+  });
+</script>
+{% endblock %}

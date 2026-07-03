@@ -3,7 +3,7 @@
 # Reusable dependencies for FastAPI endpoints.
 
 import logging
-from typing import Generator
+from typing import Any, Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
@@ -103,4 +103,13 @@ def get_retrieval_service(db: Session = Depends(get_db)) -> RetrievalService:
     return RetrievalService(
         chunk_repository=ChunkRepository(db)
     )
+
+
+def get_gemini_service() -> Any:
+    """
+    Dependency generator for GeminiService.
+    """
+    from app.ai.gemini_service import GeminiService
+    return GeminiService()
+
 

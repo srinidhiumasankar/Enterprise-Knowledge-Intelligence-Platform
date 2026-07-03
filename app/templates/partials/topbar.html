@@ -1,0 +1,76 @@
+<!--
+  topbar.html
+  -----------
+  Topbar component for EKIP Dashboard. Contains Mobile Hamburger, Search placeholder, Notifications and Profile Dropdown.
+-->
+<header class="topbar-wrapper d-flex align-items-center justify-content-between px-3 px-md-4 py-2" id="topbar">
+  <!-- Left Side: Mobile Hamburger & Mobile Brand Logo -->
+  <div class="d-flex align-items-center gap-2 gap-md-0">
+    <button type="button" class="btn-sidebar-toggle-mobile d-md-none" id="btnSidebarToggleMobile" aria-label="Open navigation menu">
+      <i class="bi bi-list fs-3"></i>
+    </button>
+    <a href="/" class="topbar-brand-mobile d-flex d-md-none align-items-center gap-2 text-decoration-none">
+      <div class="brand-icon brand-icon-sm" aria-hidden="true">
+        <i class="bi bi-cpu-fill"></i>
+      </div>
+      <span class="fw-bold text-white fs-6">EKIP</span>
+    </a>
+  </div>
+
+  <!-- Center: Search bar placeholder -->
+  <div class="topbar-search-wrapper flex-grow-1 mx-3 mx-md-4" style="max-width: 480px;">
+    <div class="position-relative search-container">
+      <i class="bi bi-search search-icon position-absolute top-50 translate-middle-y start-3 text-muted"></i>
+      <input type="text" class="form-control search-input ps-5 border-0 rounded-3 text-white bg-dark bg-opacity-50" placeholder="Search knowledge base... (Ctrl + /)" disabled readonly>
+    </div>
+  </div>
+
+  <!-- Right Side: Notifications & Profile Dropdown -->
+  <div class="d-flex align-items-center gap-3">
+    <!-- Notifications -->
+    <div class="dropdown" id="notificationDropdownContainer">
+      <button class="btn btn-icon-only text-muted position-relative" type="button" id="btnNotifications" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">
+        <i class="bi bi-bell fs-5"></i>
+        <span class="notification-dot position-absolute top-0 start-50 translate-middle p-1 bg-danger border border-2 border-dark rounded-circle"></span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2 p-2 dropdown-glass" aria-labelledby="btnNotifications" style="width: 280px;">
+        <li>
+          <h6 class="dropdown-header text-white border-bottom border-secondary-subtle pb-2 mb-2">Notifications</h6>
+        </li>
+        <li>
+          <div class="px-3 py-2 text-muted small">No new notifications.</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- User Profile Dropdown -->
+    <div class="dropdown" id="profileDropdownContainer">
+      <button class="btn btn-profile-trigger d-flex align-items-center gap-2 p-1 border-0" type="button" id="btnProfile" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User Account">
+        <div class="profile-avatar d-flex align-items-center justify-content-center rounded-circle bg-gradient-brand text-white fw-semibold" id="topbarUserInitials">
+          U
+        </div>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2 p-2 dropdown-glass" aria-labelledby="btnProfile" style="width: 240px;">
+        <li>
+          <div class="px-3 py-2 border-bottom border-secondary-subtle mb-2">
+            <span class="d-block text-white fw-semibold small text-truncate" id="topbarUserName">Enterprise User</span>
+            <span class="d-block text-muted xsmall text-truncate" id="topbarUserEmail">user@company.com</span>
+          </div>
+        </li>
+        <li>
+          <a class="dropdown-item d-flex align-items-center gap-2 rounded py-2 text-white-50" href="#" onclick="event.preventDefault(); window.showToast('Profile Settings will be available in a future phase.', 'info');">
+            <i class="bi bi-person-gear"></i> Settings
+          </a>
+        </li>
+        <li>
+          <hr class="dropdown-divider border-secondary-subtle">
+        </li>
+        <li>
+          <a class="dropdown-item text-danger d-flex align-items-center gap-2 rounded py-2" href="#" id="topbarLogout">
+            <i class="bi bi-box-arrow-right"></i> Logout
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</header>

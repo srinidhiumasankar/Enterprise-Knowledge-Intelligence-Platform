@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "dashboard.html" %}
 
 <!--
   index.html
@@ -12,7 +12,15 @@
 
 {% block title %}{{ title }}{% endblock %}
 
-{% block content %}
+{% block extra_head %}
+<script>
+  (async () => {
+    await auth.protectRoute();
+  })();
+</script>
+{% endblock %}
+
+{% block dashboard_content %}
 
 <!-- ======================================================================
      1. Hero Section

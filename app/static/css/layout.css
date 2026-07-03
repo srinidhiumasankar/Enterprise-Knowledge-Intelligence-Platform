@@ -1,0 +1,70 @@
+/*
+  layout.css
+  ----------
+  Overall structural flex/grid layout for the dashboard.
+*/
+
+:root {
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 72px;
+  --topbar-height: 70px;
+  --transition-speed: 0.3s;
+  --transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: var(--clr-bg);
+  color: var(--clr-text);
+  overflow: hidden;
+}
+
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0; /* Prevents flex items from overflowing */
+  height: 100vh;
+  position: relative;
+  transition: padding-left var(--transition-speed) var(--transition-ease);
+}
+
+/* On desktop, pad the main-wrapper when sidebar is fixed/docked */
+@media (min-width: 768px) {
+  .app-container:not(.sidebar-collapsed) .main-wrapper {
+    padding-left: var(--sidebar-width);
+  }
+  .app-container.sidebar-collapsed .main-wrapper {
+    padding-left: var(--sidebar-collapsed-width);
+  }
+}
+
+.content-wrapper {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 2rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 50% 0%, rgba(92, 107, 192, 0.05), transparent 60%);
+}
+
+/* Glassmorphism drop-down styling */
+.dropdown-glass {
+  background: rgba(26, 27, 38, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dropdown-glass .dropdown-item {
+  color: var(--clr-text-muted);
+  transition: all var(--transition-fast);
+}
+
+.dropdown-glass .dropdown-item:hover {
+  color: var(--clr-text) !important;
+  background-color: rgba(255, 255, 255, 0.06);
+}

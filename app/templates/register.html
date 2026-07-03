@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Enterprise Knowledge Intelligence Platform{% endblock %}
+
+{% block body_class %}auth-body{% endblock %}
+
+{% block extra_head %}
+<script>
+  (async () => {
+    // Redirect to dashboard immediately if already authenticated
+    await auth.redirectIfLoggedIn();
+  })();
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center flex-grow-1 py-5 animate-fade-in">
+  <div class="card glass-card border-0 rounded-4 shadow-lg">
+    <div class="card-body p-4 p-md-5">
+      
+      <!-- Logo Header -->
+      <div class="text-center mb-4">
+        <div class="auth-icon-wrapper mb-3 mx-auto">
+          <i class="bi bi-person-plus-fill fs-2"></i>
+        </div>
+        <h4 class="fw-bold text-white mb-1">Create Account</h4>
+        <p class="text-muted small">Access the Enterprise Knowledge Intelligence Suite</p>
+      </div>
+
+      <!-- Alert Placeholder -->
+      <div id="registerAlert" class="notification-card notification-card--danger d-none animate-fade-in" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span id="registerAlertText"></span>
+        <button type="button" class="btn-close-custom" onclick="document.getElementById('registerAlert').classList.add('d-none')" aria-label="Close">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form id="registerForm" novalidate>
+        <!-- Full Name Input -->
+        <div class="mb-3">
+          <label for="fullName" class="form-label small fw-semibold text-muted mb-2">Full Name</label>
+          <div class="auth-input-group">
+            <input 
+              type="text" 
+              id="fullName" 
+              class="form-control" 
+              placeholder="John Doe" 
+              maxlength="255"
+              autocomplete="name"
+              aria-label="Full Name"
+            />
+            <i class="bi bi-person input-icon"></i>
+          </div>
+        </div>
+
+        <!-- Email Input -->
+        <div class="mb-3">
+          <label for="registerEmail" class="form-label small fw-semibold text-muted mb-2">Email Address</label>
+          <div class="auth-input-group">
+            <input 
+              type="email" 
+              id="registerEmail" 
+              class="form-control" 
+              placeholder="name@company.com" 
+              required
+              autocomplete="email"
+              aria-label="Email Address"
+            />
+            <i class="bi bi-envelope input-icon"></i>
+            <div class="invalid-feedback">Please enter a valid email address.</div>
+          </div>
+        </div>
+
+        <!-- Password Input -->
+        <div class="mb-3">
+          <label for="registerPassword" class="form-label small fw-semibold text-muted mb-2">Password</label>
+          <div class="auth-input-group">
+            <input 
+              type="password" 
+              id="registerPassword" 
+              class="form-control" 
+              placeholder="••••••••" 
+              required
+              autocomplete="new-password"
+              aria-label="Password"
+            />
+            <i class="bi bi-lock input-icon"></i>
+            <div class="invalid-feedback">Password is required.</div>
+          </div>
+          
+          <!-- Password Strength Meter -->
+          <div class="mt-2">
+            <div class="progress password-meter-bar" style="height: 5px;">
+              <div id="strengthBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-1">
+              <span id="strengthText" class="xsmall text-muted fw-medium">Strength: None</span>
+              <span class="xsmall text-muted">Min. 8 characters</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirm Password Input -->
+        <div class="mb-4">
+          <label for="confirmPassword" class="form-label small fw-semibold text-muted mb-2">Confirm Password</label>
+          <div class="auth-input-group">
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              class="form-control" 
+              placeholder="••••••••" 
+              required
+              autocomplete="new-password"
+              aria-label="Confirm Password"
+            />
+            <i class="bi bi-shield-check input-icon"></i>
+            <div class="invalid-feedback" id="confirmFeedback">Confirm password is required.</div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnRegister" class="btn btn-premium w-100 fw-semibold d-flex justify-content-center align-items-center gap-2">
+          <span>Create Account</span>
+          <span class="spinner-border spinner-border-sm d-none" id="btnSpinner" role="status" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <!-- Redirect to Sign In -->
+      <div class="text-center mt-4">
+        <p class="small text-muted mb-0">
+          Already have an account? <a href="/login" class="text-primary fw-semibold text-decoration-none">Sign In</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<!-- Footer removed on auth pages as per Phase 8.1 UI Enhancement specs -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const form = document.getElementById("registerForm");
+    const emailInput = document.getElementById("registerEmail");
+    const passwordInput = document.getElementById("registerPassword");
+    const confirmInput = document.getElementById("confirmPassword");
+    const btn = document.getElementById("btnRegister");
+    const spinner = document.getElementById("btnSpinner");
+    const alertDiv = document.getElementById("registerAlert");
+    const alertText = document.getElementById("registerAlertText");
+    const strengthBar = document.getElementById("strengthBar");
+    const strengthText = document.getElementById("strengthText");
+    const confirmFeedback = document.getElementById("confirmFeedback");
+
+    // Live Password Strength Checker
+    passwordInput.addEventListener("input", () => {
+      const password = passwordInput.value;
+      let score = 0;
+      
+      if (password.length >= 8) score++;
+      if (/[A-Z]/.test(password)) score++;
+      if (/[a-z]/.test(password)) score++;
+      if (/[0-9]/.test(password)) score++;
+      if (/[!@#$%^&*()_+\-=\[\]{}|;':",./<>?`~]/.test(password)) score++;
+
+      let percent = (score / 5) * 100;
+      strengthBar.style.width = percent + "%";
+
+      if (score === 0) {
+        strengthBar.className = "progress-bar";
+        strengthText.textContent = "Strength: None";
+        strengthText.className = "xsmall text-muted fw-medium";
+      } else if (score <= 2) {
+        strengthBar.className = "progress-bar bg-danger";
+        strengthText.textContent = "Strength: Weak";
+        strengthText.className = "xsmall text-danger fw-medium";
+      } else if (score <= 4) {
+        strengthBar.className = "progress-bar bg-warning";
+        strengthText.textContent = "Strength: Medium";
+        strengthText.className = "xsmall text-warning fw-medium";
+      } else {
+        strengthBar.className = "progress-bar bg-success";
+        strengthText.textContent = "Strength: Strong";
+        strengthText.className = "xsmall text-success fw-medium";
+      }
+    });
+
+    // Handle Registration Submit
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      
+      form.classList.remove("was-validated");
+      alertDiv.classList.add("d-none");
+      confirmInput.classList.remove("is-invalid");
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmInput.value;
+      const fullName = document.getElementById("fullName").value.trim();
+
+      // Basic standard fields validation
+      if (!form.checkValidity()) {
+        form.classList.add("was-validated");
+        return;
+      }
+
+      // Confirm password match check
+      if (password !== confirmPassword) {
+        confirmInput.classList.add("is-invalid");
+        confirmFeedback.textContent = "Passwords do not match.";
+        return;
+      }
+
+      // Check password complexity requirements (mirrors backend UserCreate schema validator)
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasDigit = /[0-9]/.test(password);
+      const hasSpecial = /[!@#$%^&*()_+\-=\[\]{}|;':",./<>?`~]/.test(password);
+
+      if (password.length < 8 || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+        alertDiv.className = "notification-card notification-card--danger animate-fade-in";
+        alertText.textContent = "Password must contain at least 8 characters, including 1 uppercase letter, 1 lowercase letter, 1 digit, and 1 special character.";
+        alertDiv.classList.remove("d-none");
+        window.showToast("Password does not meet complexity requirements.", "danger");
+        return;
+      }
+
+      // Trigger Spinner
+      btn.disabled = true;
+      spinner.classList.remove("d-none");
+
+      try {
+        await auth.register(fullName, email, password);
+        window.showToast("Registration successful! Redirecting to login...", "success");
+        alertDiv.className = "notification-card notification-card--success animate-fade-in";
+        alertDiv.querySelector("i").className = "bi bi-check-circle-fill";
+        alertText.textContent = "Account created successfully! Redirecting...";
+        alertDiv.classList.remove("d-none");
+
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1000);
+      } catch (err) {
+        alertDiv.className = "notification-card notification-card--danger animate-fade-in";
+        alertDiv.querySelector("i").className = "bi bi-exclamation-triangle-fill";
+        alertText.textContent = err.message || "Failed to create account. Email may be already registered.";
+        alertDiv.classList.remove("d-none");
+        window.showToast(err.message || "Registration failed.", "danger");
+      } finally {
+        // Always stop loading in finally block
+        btn.disabled = false;
+        spinner.classList.add("d-none");
+      }
+    });
+  });
+</script>
+{% endblock %}

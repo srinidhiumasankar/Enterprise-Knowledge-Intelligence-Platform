@@ -2,8 +2,8 @@
 # ----------------------
 # Application configuration settings, loaded from environment variables or .env file.
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 class Settings(BaseSettings):
     """
@@ -48,5 +48,19 @@ class Settings(BaseSettings):
     DEFAULT_TOP_K: int = 5
     SIMILARITY_THRESHOLD: float = 0.55
 
+    # AI / LLM Settings
+    GEMINI_API_KEY: str = ""
+
+    @field_validator("GEMINI_API_KEY")
+    @classmethod
+    def validate_gemini_key(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError(
+                "Configuration Error: GEMINI_API_KEY is missing. "
+                "Please configure GEMINI_API_KEY in your environment or .env file."
+            )
+        return v
+
 
 settings = Settings()
+

@@ -7,7 +7,6 @@
  *   - Navbar background transition on scroll
  *   - Dashboard card staggered entrance animation (IntersectionObserver)
  *   - CTA button feedback (toast-style console notice — no business logic)
- *   - API health-check ping against GET /
  *
  * No external dependencies — vanilla ES6+ only.
  */
@@ -79,7 +78,6 @@
   const btnChat   = document.getElementById("btnChat");
 
   const notify = (message) => {
-    // Console notice only — no alert(), no side-effects
     console.info("[EKIP]", message);
   };
 
@@ -97,19 +95,151 @@
 })();
 
 /* ============================================================
-   API Health Check — confirms FastAPI server is reachable.
-   Logs result to the browser console only.
+   UI Helpers: Toast Notification & Loading Spinner
    ============================================================ */
-(function checkAPIHealth() {
-  fetch("/", { method: "HEAD" })
-    .then((response) => {
-      if (response.ok) {
-        console.info("[EKIP] Server health check passed ✓ (HTTP", response.status + ")");
-      } else {
-        console.warn("[EKIP] Server responded with unexpected status:", response.status);
-      }
-    })
-    .catch((err) => {
-      console.error("[EKIP] Could not reach the server:", err.message);
+window.showToast = function (message, type = "info") {
+  const container = document.querySelector(".toast-container");
+  if (!container) return;
+
+  const toastId = "toast_" + Date.now();
+  const bgClass =
+    type === "success"
+      ? "bg-success text-white"
+      : type === "danger"
+      ? "bg-danger text-white"
+      : type === "warning"
+      ? "bg-warning text-dark"
+      : "bg-primary text-white";
+
+  const iconClass =
+    type === "success"
+      ? "bi-check-circle-fill"
+      : type === "danger"
+      ? "bi-exclamation-triangle-fill"
+      : type === "warning"
+      ? "bi-exclamation-circle-fill"
+      : "bi-info-circle-fill";
+
+  const toastHTML = `
+    <div id="${toastId}" class="toast align-items-center ${bgClass} border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2">
+          <i class="bi ${iconClass}"></i>
+          <span>${message}</span>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML("beforeend", toastHTML);
+  const element = document.getElementById(toastId);
+
+  if (window.bootstrap && window.bootstrap.Toast) {
+    const bsToast = new window.bootstrap.Toast(element);
+    bsToast.show();
+    element.addEventListener("hidden.bs.toast", () => {
+      element.remove();
     });
-})();
+  } else {
+    // Custom vanilla CSS fallback when bootstrap bundle is not loaded or is delayed
+    element.style.display = "block";
+    element.style.opacity = "0";
+    element.style.transition = "opacity 0.35s ease";
+    // Trigger layout calculation
+    element.offsetHeight;
+    element.style.opacity = "1";
+
+    const closeBtn = element.querySelector("[data-bs-dismiss='toast']");
+    const removeToast = () => {
+      element.style.opacity = "0";
+      setTimeout(() => element.remove(), 350);
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener("click", removeToast);
+    }
+
+    setTimeout(removeToast, 4000);
+  }
+};
+
+window.showSpinner = function () {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.classList.remove("d-none");
+    overlay.classList.add("d-flex");
+  }
+};
+
+window.hideSpinner = function () {
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    overlay.classList.add("d-none");
+    overlay.classList.remove("d-flex");
+  }
+};
+
+/* ============================================================
+   Dynamic Navbar State Control & Sync Helpers
+   ============================================================ */
+function renderLoggedOutNavbar(navLinks) {
+  navLinks.innerHTML = `
+    <li class="nav-item">
+      <a class="nav-link" href="/login" id="navLogin">Login</a>
+    </li>
+    <li class="nav-item ms-lg-2">
+      <a class="btn btn-primary px-3 py-1 text-white mt-2 mt-lg-0" href="/register" id="navRegister">Sign Up</a>
+    </li>
+  `;
+}
+
+function renderLoggedInNavbar(navLinks, email) {
+  navLinks.innerHTML = `
+    <li class="nav-item">
+      <a class="nav-link active" href="/" id="navHome">Dashboard</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" href="/docs" id="navDocs" target="_blank" rel="noopener">
+        API Docs
+      </a>
+    </li>
+    <li class="nav-item dropdown ms-lg-2">
+      <a class="nav-link dropdown-toggle btn btn-outline-primary d-flex align-items-center gap-2 py-1 px-3 text-start mt-2 mt-lg-0" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-person-circle"></i> Account
+      </a>
+      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2 p-2" aria-labelledby="userDropdown">
+        <li>
+          <div class="px-3 py-2 text-muted small border-bottom mb-2 text-truncate" id="navUserEmail" style="max-width: 200px;">
+            ${email}
+          </div>
+        </li>
+        <li>
+          <a class="dropdown-item text-danger d-flex align-items-center gap-2 rounded py-2" href="#" id="navLogout">
+            <i class="bi bi-box-arrow-right"></i> Logout
+          </a>
+        </li>
+      </ul>
+    </li>
+  `;
+
+  // Wire up logout handler
+  const logoutBtn = document.getElementById("navLogout");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      auth.logout();
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  const navLinks = document.getElementById("navLinks");
+  if (!navLinks) return;
+
+  const authenticated = await auth.isLoggedIn();
+  if (authenticated && auth.currentUser) {
+    renderLoggedInNavbar(navLinks, auth.currentUser.email);
+  } else {
+    renderLoggedOutNavbar(navLinks);
+  }
+});

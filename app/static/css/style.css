@@ -572,3 +572,289 @@ body {
   #heroActions .btn-primary-custom,
   #heroActions .btn-outline-custom { justify-content: center; }
 }
+
+/* ============================================================
+   12. Authentication Module (Phase 8.1 - Redesign)
+   ============================================================ */
+.auth-body {
+  background-color: #030409 !important;
+  background-image: 
+    radial-gradient(at 10% 20%, rgba(92, 107, 192, 0.08) 0px, transparent 50%),
+    radial-gradient(at 90% 10%, rgba(0, 188, 212, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(233, 30, 140, 0.04) 0px, transparent 50%) !important;
+  background-size: 200% 200% !important;
+  animation: meshMove 18s ease infinite alternate !important;
+  position: relative;
+}
+
+@keyframes meshMove {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 100%; }
+}
+
+/* Transparent Navbar for Auth Pages */
+.auth-body .ekip-navbar {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+/* Glassmorphism Card styling */
+.glass-card {
+  background: rgba(18, 19, 26, 0.6) !important;
+  backdrop-filter: blur(24px) saturate(120%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(120%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.065) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 
+              0 0 80px rgba(92, 107, 192, 0.04) !important;
+  transition: transform 0.4s var(--ease-out), border-color 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out) !important;
+  width: 100%;
+  max-width: 460px;
+}
+
+.glass-card:hover {
+  border-color: rgba(92, 107, 192, 0.2) !important;
+  box-shadow: 0 32px 72px rgba(0, 0, 0, 0.65), 
+              0 0 100px rgba(92, 107, 192, 0.065) !important;
+}
+
+.auth-icon-wrapper {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(92, 107, 192, 0.12);
+  color: var(--clr-accent-1);
+}
+
+.xsmall {
+  font-size: 0.75rem;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.45s var(--ease-out) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Premium Inputs Layout */
+.auth-input-group {
+  position: relative;
+  width: 100%;
+}
+
+.auth-input-group .form-control {
+  height: 48px !important;
+  padding-left: 46px !important;
+  background-color: rgba(11, 12, 16, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+  font-size: 0.92rem !important;
+  border-radius: var(--radius-md) !important;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease !important;
+}
+
+.auth-input-group .form-control::placeholder {
+  color: var(--clr-text-muted) !important;
+  opacity: 0.7;
+}
+
+.auth-input-group .form-control:focus {
+  background-color: rgba(11, 12, 16, 0.9) !important;
+  border-color: rgba(92, 107, 192, 0.6) !important;
+  box-shadow: 0 0 0 4px rgba(92, 107, 192, 0.15) !important;
+  outline: none;
+}
+
+.auth-input-group .input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--clr-text-muted);
+  font-size: 1.15rem;
+  z-index: 10;
+  pointer-events: none;
+  transition: color 0.25s ease !important;
+}
+
+.auth-input-group .form-control:focus ~ .input-icon {
+  color: var(--clr-accent-2) !important;
+}
+
+/* Custom Validation States styling */
+.form-control.is-valid,
+.was-validated .form-control:valid {
+  border-color: #2e7d32 !important;
+  background-image: none !important;
+}
+
+.form-control.is-valid:focus,
+.was-validated .form-control:valid:focus {
+  box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.15) !important;
+}
+
+.form-control.is-invalid,
+.was-validated .form-control:invalid {
+  border-color: #d32f2f !important;
+  background-image: none !important;
+}
+
+.form-control.is-invalid:focus,
+.was-validated .form-control:invalid:focus {
+  box-shadow: 0 0 0 4px rgba(211, 47, 47, 0.15) !important;
+}
+
+.invalid-feedback,
+.valid-feedback {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  margin-top: 6px !important;
+  display: none;
+}
+
+.is-invalid ~ .invalid-feedback,
+.was-validated .form-control:invalid ~ .invalid-feedback {
+  display: block !important;
+  color: #ff5252 !important;
+}
+
+.is-valid ~ .valid-feedback,
+.was-validated .form-control:valid ~ .valid-feedback {
+  display: block !important;
+  color: #69f0ae !important;
+}
+
+/* Redesigned Notification Cards (Dismissible Alerts) */
+.notification-card {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid transparent !important;
+  padding: 0.85rem 1.15rem !important;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 1.25rem !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3) !important;
+  animation: slideInDown 0.35s var(--ease-out) both !important;
+}
+
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.notification-card--danger {
+  background-color: rgba(211, 47, 47, 0.1) !important;
+  border-color: rgba(211, 47, 47, 0.25) !important;
+  color: #ff8a80 !important;
+}
+
+.notification-card--success {
+  background-color: rgba(46, 125, 50, 0.1) !important;
+  border-color: rgba(46, 125, 50, 0.25) !important;
+  color: #b9f6ca !important;
+}
+
+.notification-card--info {
+  background-color: rgba(92, 107, 192, 0.1) !important;
+  border-color: rgba(92, 107, 192, 0.25) !important;
+  color: #8c9eff !important;
+}
+
+.notification-card--warning {
+  background-color: rgba(255, 167, 38, 0.1) !important;
+  border-color: rgba(255, 167, 38, 0.25) !important;
+  color: #ffe082 !important;
+}
+
+.notification-card .btn-close-custom {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  margin-left: auto;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.notification-card .btn-close-custom:hover {
+  opacity: 1;
+}
+
+/* Premium Gradient Action Buttons */
+.btn-premium {
+  height: 48px !important;
+  background: linear-gradient(135deg, #5c6bc0 0%, #3949ab 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 4px 14px rgba(92, 107, 192, 0.3) !important;
+  transition: transform 0.15s ease, box-shadow 0.25s ease, opacity 0.25s ease !important;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-premium:hover:not(:disabled) {
+  transform: translateY(-1.5px) scale(1.005) !important;
+  box-shadow: 0 6px 20px rgba(92, 107, 192, 0.45) !important;
+}
+
+.btn-premium:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.99) !important;
+}
+
+.btn-premium:disabled {
+  background: linear-gradient(135deg, rgba(92, 107, 192, 0.6) 0%, rgba(57, 73, 171, 0.6) 100%) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.8 !important;
+}
+
+/* Password complexity labels alignment */
+.password-meter-bar {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* Toast styling adjustments */
+.toast-body {
+  font-size: 0.85rem;
+}
+
+/* Dropdown styling adjustments */
+.dropdown-menu {
+  background-color: var(--clr-surface-2) !important;
+  border: 1px solid var(--clr-border) !important;
+}
+
+.dropdown-item {
+  color: var(--clr-text-muted) !important;
+  font-size: 0.85rem;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.dropdown-item:hover {
+  color: var(--clr-text) !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.dropdown-divider {
+  border-top: 1px solid var(--clr-border) !important;
+}
+
