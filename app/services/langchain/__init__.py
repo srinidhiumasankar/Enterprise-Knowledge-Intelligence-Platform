@@ -9,6 +9,7 @@ from app.services.langchain.prompts import get_qa_prompt, get_basic_prompt, get_
 from app.services.langchain.chains import create_basic_chain, create_qa_chain, create_rag_chain
 from app.services.langchain.citations import create_citation_rag_chain, create_conversational_rag_chain
 from app.services.langchain.retriever import get_retriever
+from app.services.langchain.hybrid_retriever import get_hybrid_retriever
 
 __all__ = [
     "get_llm",
@@ -23,4 +24,5 @@ __all__ = [
     "create_citation_rag_chain",
     "create_conversational_rag_chain",
     "get_retriever",
+    "get_hybrid_retriever",
 ]

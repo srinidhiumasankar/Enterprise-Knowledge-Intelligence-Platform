@@ -102,34 +102,14 @@ def get_retriever(
     embedding_service: Optional[Any] = None
 ) -> BaseRetriever:
     """
-    Factory function to construct a ChromaLangChainRetriever.
-
-    Purpose:
-        Initializes and returns a configured LangChain retriever for search and RAG chains.
-
-    Parameters:
-        owner_id (Optional[int]): User/owner ID to restrict search results.
-        document_id (Optional[int]): Document ID to restrict search results.
-        top_k (int): Number of top documents to fetch. Defaults to 5.
-        chroma_service (Optional[Any]): Custom ChromaService instance. Loaded from app imports if None.
-        embedding_service (Optional[Any]): Custom EmbeddingService instance. Loaded from app imports if None.
-
-    Returns:
-        BaseRetriever: The initialized custom LangChain retriever wrapper.
+    Factory function to construct a ChromaHybridRetriever.
     """
-    logger.info("Initializing LangChain retriever...")
-    
-    # Lazy imports to avoid circular dependencies
-    from app.embeddings.chroma_service import ChromaService
-    from app.embeddings.embedding_service import EmbeddingService
-
-    active_chroma = chroma_service or ChromaService()
-    active_embeddings = embedding_service or EmbeddingService()
-
-    return ChromaLangChainRetriever(
-        chroma_service=active_chroma,
-        embedding_service=active_embeddings,
+    logger.info("Initializing LangChain retriever (redirecting to Hybrid)...")
+    from app.services.langchain.hybrid_retriever import get_hybrid_retriever
+    return get_hybrid_retriever(
         owner_id=owner_id,
         document_id=document_id,
-        top_k=top_k
+        top_k=top_k,
+        chroma_service=chroma_service,
+        embedding_service=embedding_service
     )

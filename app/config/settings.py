@@ -47,6 +47,8 @@ class Settings(BaseSettings):
     TOP_K_RESULTS: int = 5
     DEFAULT_TOP_K: int = 5
     SIMILARITY_THRESHOLD: float = 0.55
+    HYBRID_SEMANTIC_WEIGHT: float = 0.7
+    HYBRID_KEYWORD_WEIGHT: float = 0.3
 
     # AI / LLM Settings
     GEMINI_API_KEY: str = ""
