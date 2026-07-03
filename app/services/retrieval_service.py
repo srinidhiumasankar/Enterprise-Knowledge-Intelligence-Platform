@@ -56,26 +56,25 @@ class RetrievalService:
             threshold = getattr(config, "SIMILARITY_THRESHOLD", 0.45)
 
         try:
-            # 1. Generate Query Embedding
-            logger.info("Generating query embedding...")
-            query_embedding = self.embedding_service.generate_query_embedding(query)
-
             # Retrieve a larger list to account for threshold filtering and deduplication
             fetch_limit = max(top_k * 3, 20)
 
-            # 2. Semantic Search in ChromaDB (user isolated by owner_id)
-            logger.info(f"Searching ChromaDB collection with owner_id filter={user_id}, limit={fetch_limit}...")
-            search_results = self.chroma_service.similarity_search(
-                query_embedding=query_embedding,
-                n_results=fetch_limit,
-                where={"owner_id": user_id}
+            # 2. Semantic Search via LangChain Retriever wrapping ChromaDB
+            logger.info(f"Searching ChromaDB via LangChain retriever wrapper with owner_id filter={user_id}, limit={fetch_limit}...")
+            from app.services.langchain.retriever import get_retriever
+            retriever = get_retriever(
+                owner_id=user_id,
+                top_k=fetch_limit,
+                chroma_service=self.chroma_service,
+                embedding_service=self.embedding_service
             )
+            retrieved_docs = retriever.invoke(query)
 
-            # Extract IDs, distances, documents, and metadatas
-            ids = search_results.get("ids", [[]])[0] if search_results.get("ids") else []
-            distances = search_results.get("distances", [[]])[0] if search_results.get("distances") else []
-            documents = search_results.get("documents", [[]])[0] if search_results.get("documents") else []
-            metadatas = search_results.get("metadatas", [[]])[0] if search_results.get("metadatas") else []
+            # Convert LangChain Documents back to standard lists for backward compatibility
+            ids = [doc.metadata.get("chunk_id") for doc in retrieved_docs]
+            distances = [doc.metadata.get("distance", 0.0) for doc in retrieved_docs]
+            documents = [doc.page_content for doc in retrieved_docs]
+            metadatas = [doc.metadata for doc in retrieved_docs]
 
             total_retrieved = len(ids)
             logger.info(f"ChromaDB returned {total_retrieved} raw results.")
