@@ -34,3 +34,4 @@ langchain
 langchain-core
 langchain-community
 langchain-google-genai
+lark

@@ -83,6 +83,7 @@ class ChromaHybridRetriever(BaseRetriever):
     top_k: int = Field(default=5, description="Number of results to retrieve")
     semantic_weight: float = Field(default_factory=lambda: settings.HYBRID_SEMANTIC_WEIGHT)
     keyword_weight: float = Field(default_factory=lambda: settings.HYBRID_KEYWORD_WEIGHT)
+    where_override: Optional[Dict[str, Any]] = Field(default=None, description="Optional Chroma filter clause override")
 
     def _get_relevant_documents(
         self, query: str, *, run_manager: CallbackManagerForRetrieverRun
@@ -95,17 +96,20 @@ class ChromaHybridRetriever(BaseRetriever):
 
         try:
             # Build filters
-            filters = []
-            if self.owner_id is not None:
-                filters.append({"owner_id": self.owner_id})
-            if self.document_id is not None:
-                filters.append({"document_id": self.document_id})
+            if self.where_override is not None:
+                where_clause = self.where_override
+            else:
+                filters = []
+                if self.owner_id is not None:
+                    filters.append({"owner_id": self.owner_id})
+                if self.document_id is not None:
+                    filters.append({"document_id": self.document_id})
 
-            where_clause = None
-            if len(filters) == 1:
-                where_clause = filters[0]
-            elif len(filters) > 1:
-                where_clause = {"$and": filters}
+                where_clause = None
+                if len(filters) == 1:
+                    where_clause = filters[0]
+                elif len(filters) > 1:
+                    where_clause = {"$and": filters}
 
             # 1. Semantic Search
             semantic_start = time.time()
