@@ -34,11 +34,17 @@ from app.api.auth import router as auth_router
 from app.api.upload import router as upload_router
 from app.api.search import router as search_router
 from app.api.debug import router as debug_router
+from app.api.conversation import router as conversation_router
+from app.api.collection import router as collection_router
+from app.api.retrieval import router as retrieval_router
 
 app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(search_router)
 app.include_router(debug_router)
+app.include_router(conversation_router)
+app.include_router(collection_router)
+app.include_router(retrieval_router)
 
 # ---------------------------------------------------------------------------
 # Static files — served at /static

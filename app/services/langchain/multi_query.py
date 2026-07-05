@@ -14,6 +14,7 @@ from langchain_core.prompts import PromptTemplate
 from pydantic import Field
 
 from app.services.langchain.llm import get_llm
+from app.services.langchain.pipeline_cache import get_current_request_cache, freeze_value
 from app.services.langchain.retriever import get_retriever
 
 logger = logging.getLogger(__name__)
@@ -51,36 +52,52 @@ class MultiQueryRetriever(BaseRetriever):
         logger.info(f"Original Query: '{query}'")
 
         try:
-            # 1. Generate alternate queries using Gemini
-            logger.info("Generating multiple search queries...")
-            prompt = MULTI_QUERY_PROMPT.format(question=query)
-            response = self.llm.invoke(prompt)
-            content = response.content if hasattr(response, "content") else str(response)
+            # Check request-scoped cache for alternate queries
+            cache = get_current_request_cache()
+            unique_generated = None
+            cache_key = None
+            if cache is not None:
+                cache_key = ("multi_query_expansion", query)
+                if cache_key in cache.cache:
+                    unique_generated = cache.cache[cache_key]
+                    cache.log_hit(f"MultiQueryRetriever alternate queries for '{query}'")
+                else:
+                    cache.log_miss(f"MultiQueryRetriever alternate queries for '{query}'")
 
-            # Parse lines robustly
-            generated_queries = []
-            for line in content.split("\n"):
-                line = line.strip()
-                if not line:
-                    continue
-                # Strip leading numbers/bullets (e.g. "1.", "2)", "-", "*")
-                clean_line = re.sub(r'^\s*[\d\-\*\+\•\)\.]+\s*', '', line).strip()
-                if clean_line:
-                    generated_queries.append(clean_line)
+            if unique_generated is None:
+                # 1. Generate alternate queries using Gemini
+                logger.info("Generating multiple search queries...")
+                prompt = MULTI_QUERY_PROMPT.format(question=query)
+                response = self.llm.invoke(prompt)
+                content = response.content if hasattr(response, "content") else str(response)
 
-            # Keep unique queries to avoid redundant retrieval
-            seen_queries = set()
-            unique_generated = []
-            for q in generated_queries:
-                if q.lower() not in seen_queries:
-                    seen_queries.add(q.lower())
-                    unique_generated.append(q)
+                # Parse lines robustly
+                generated_queries = []
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    # Strip leading numbers/bullets (e.g. "1.", "2)", "-", "*")
+                    clean_line = re.sub(r'^\s*[\d\-\*\+\•\)\.]+\s*', '', line).strip()
+                    if clean_line:
+                        generated_queries.append(clean_line)
 
-            # Ensure we have at least 3 queries, adding the original if needed
-            if len(unique_generated) < 3:
-                logger.warning(f"Generated only {len(unique_generated)} queries. Adding original query.")
-                if query.lower() not in seen_queries:
-                    unique_generated.insert(0, query)
+                # Keep unique queries to avoid redundant retrieval
+                seen_queries = set()
+                unique_generated = []
+                for q in generated_queries:
+                    if q.lower() not in seen_queries:
+                        seen_queries.add(q.lower())
+                        unique_generated.append(q)
+
+                # Ensure we have at least 3 queries, adding the original if needed
+                if len(unique_generated) < 3:
+                    logger.warning(f"Generated only {len(unique_generated)} queries. Adding original query.")
+                    if query.lower() not in seen_queries:
+                        unique_generated.insert(0, query)
+
+                if cache is not None and cache_key is not None:
+                    cache.cache[cache_key] = unique_generated
 
             logger.info("Generated Queries:")
             for idx, gq in enumerate(unique_generated, 1):
@@ -92,7 +109,36 @@ class MultiQueryRetriever(BaseRetriever):
             
             for idx, gq in enumerate(unique_generated, 1):
                 q_start = time.time()
-                docs = self.retriever.invoke(gq)
+                
+                # Check cache for retrieval results of sub-retriever on gq
+                sub_cache_key = None
+                docs = None
+                if cache is not None:
+                    # Traverse retriever to get where_override
+                    where_clause = None
+                    curr = self.retriever
+                    for _ in range(10):
+                        if hasattr(curr, "where_override"):
+                            where_clause = curr.where_override
+                            break
+                        elif hasattr(curr, "base_retriever"):
+                            curr = curr.base_retriever
+                        elif hasattr(curr, "retriever"):
+                            curr = curr.retriever
+                        else:
+                            break
+                    sub_cache_key = ("sub_retriever_invoke", gq, freeze_value(where_clause))
+                    if sub_cache_key in cache.cache:
+                        docs = cache.cache[sub_cache_key]
+                        cache.log_hit(f"Sub-retriever invoke for query '{gq}' with filters {where_clause}")
+                    else:
+                        cache.log_miss(f"Sub-retriever invoke for query '{gq}' with filters {where_clause}")
+                
+                if docs is None:
+                    docs = self.retriever.invoke(gq)
+                    if cache is not None and sub_cache_key is not None:
+                        cache.cache[sub_cache_key] = docs
+
                 all_retrieved_docs.append(docs)
                 q_latency = (time.time() - q_start) * 1000
                 logger.info(f"Query {idx}: '{gq}' -> Retrieved {len(docs)} documents in {q_latency:.2f}ms")

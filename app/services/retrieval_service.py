@@ -39,6 +39,8 @@ class RetrievalService:
         query: str,
         top_k: int = 5,
         threshold: Optional[float] = None,
+        collection_ids: Optional[List[int]] = None,
+        workspace_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         Execute semantic search and return a ranked list of text chunks.
@@ -49,7 +51,7 @@ class RetrievalService:
             raise ValueError("Search query cannot be empty or whitespace-only.")
 
         start_time = time.time()
-        logger.info(f"Initiating semantic search for user_id={user_id}, query='{query}', top_k={top_k}")
+        logger.info(f"Initiating semantic search for user_id={user_id}, query='{query}', top_k={top_k}, collection_ids={collection_ids}, workspace_id={workspace_id}")
 
         if threshold is None:
             from app.embeddings import config
@@ -59,11 +61,42 @@ class RetrievalService:
             # Retrieve a larger list to account for threshold filtering and deduplication
             fetch_limit = max(top_k * 3, 20)
 
+            # Collection and Workspace filtering integration
+            document_id = None
+            from app.config import settings
+            enable_filtering = getattr(settings, "ENABLE_COLLECTION_FILTERING", True)
+            if enable_filtering and (collection_ids is not None or workspace_id is not None):
+                from app.database import SessionLocal
+                from app.services.collection.collection_filter_service import CollectionFilterService
+                from sqlalchemy import select
+
+                db = SessionLocal()
+                try:
+                    if not workspace_id:
+                        from app.models.workspace import Workspace
+                        ws = db.scalars(select(Workspace).where(Workspace.owner_id == user_id)).first()
+                        workspace_id = ws.id if ws else None
+
+                    if workspace_id:
+                        filter_service = CollectionFilterService(db)
+                        resolved_doc_ids = filter_service.validate_and_resolve_filters(
+                            user_id=user_id,
+                            workspace_id=workspace_id,
+                            collection_ids=collection_ids
+                        )
+                        if len(resolved_doc_ids) == 1:
+                            document_id = resolved_doc_ids[0]
+                        else:
+                            document_id = {"$in": resolved_doc_ids}
+                finally:
+                    db.close()
+
             # 2. Semantic Search via LangChain Retriever wrapping ChromaDB
-            logger.info(f"Searching ChromaDB via LangChain retriever wrapper with owner_id filter={user_id}, limit={fetch_limit}...")
+            logger.info(f"Searching ChromaDB via LangChain retriever wrapper with owner_id filter={user_id}, document_id={document_id}, limit={fetch_limit}...")
             from app.services.langchain.retriever import get_retriever
             retriever = get_retriever(
                 owner_id=user_id,
+                document_id=document_id,
                 top_k=fetch_limit,
                 chroma_service=self.chroma_service,
                 embedding_service=self.embedding_service
@@ -157,6 +190,8 @@ class RetrievalService:
             )
             return ranked_results
 
+        except (KeyError, ValueError, PermissionError) as e:
+            raise e
         except Exception as e:
             logger.error(f"Error during semantic retrieval: {e}", exc_info=True)
             raise RuntimeError(f"Semantic retrieval failed: {e}")

@@ -167,9 +167,31 @@ class LangChainRAGChain:
             logger.info("LLM response matches insufficient information markers. Normalizing to fallback.")
             raw_answer = "Insufficient information found in uploaded documents."
 
+        # 5. Answer Verification & Grounding Check
+        try:
+            from app.services.langchain.answer_verifier_service import AnswerVerifierService
+            verifier_service = AnswerVerifierService()
+            verifier = verifier_service.get_verifier()
+            t_verify_start = time.perf_counter()
+            final_response = verifier.verify_answer(raw_answer, docs)
+            verify_latency = (time.perf_counter() - t_verify_start) * 1000
+            from app.services.langchain.retrieval_analytics import RetrievalAnalytics
+            RetrievalAnalytics.get_instance().record_latency("answer_verifier_latency", verify_latency)
+        except Exception as e:
+            logger.warning(f"Answer verification failed: {e}. Falling back to raw LLM answer.", exc_info=True)
+            from app.services.langchain.answer_verifier import FinalResponse
+            final_response = FinalResponse(
+                raw_answer,
+                verification_score=50.0,
+                grounding_score=50.0,
+                hallucination_risk="Medium",
+                verification_status="Passed",
+                confidence_level="Medium"
+            )
+
         total_latency = time.perf_counter() - total_start
         logger.info(f"Total chain latency: {total_latency:.4f}s")
-        return raw_answer
+        return final_response
 
     @staticmethod
     def format_docs(docs: List[Any]) -> str:

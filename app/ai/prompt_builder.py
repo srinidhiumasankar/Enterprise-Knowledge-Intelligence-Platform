@@ -18,17 +18,19 @@ class PromptBuilder:
     def build_prompt(
         question: str,
         chunks: Optional[List[Dict[str, Any]]] = None,
+        conversation_history: Optional[str] = None
     ) -> str:
         """
-        Build a context prompt combining the user question with the retrieved chunks.
+        Build a context prompt combining the user question, conversation history, and retrieved chunks.
 
         Args:
             question: The user's query string.
             chunks: A list of retrieval result dictionaries, each containing 'text' and 'metadata'.
+            conversation_history: A text block representing formatted chat messages.
 
         Returns:
             str: The constructed prompt for the LLM.
-        """
+            """
         logger.info(f"Building prompt for question: '{question}' with {len(chunks) if chunks else 0} context chunks.")
 
         if not question or not question.strip():
@@ -72,7 +74,8 @@ class PromptBuilder:
         # Assemble prompt template
         context_str = "\n".join(context_blocks) if context_blocks else "No relevant context available."
 
-        prompt = (
+        # Compile segments
+        prompt_segments = [
             "You are a helpful, precise Enterprise Knowledge Intelligence Assistant. "
             "Your goal is to answer the user's question accurately using ONLY the provided context blocks below.\n\n"
             "=== STRICT CONSTRAINTS ===\n"
@@ -80,13 +83,30 @@ class PromptBuilder:
             "2. Do NOT extrapolate, assume, or integrate outside knowledge. If the answer is not explicitly present in the context, "
             "you MUST state exactly: 'I cannot determine the answer from the uploaded documents.'\n"
             "3. Keep the response concise but complete.\n"
-            "4. Preserve all technical terms, exact numbers, and nomenclature as they appear in the source.\n\n"
-            "=== PROVIDED CONTEXT ===\n"
-            f"{context_str}\n\n"
-            "=== USER QUESTION ===\n"
-            f"{question}\n\n"
-            "=== ANSWER ==="
+            "4. Preserve all technical terms, exact numbers, and nomenclature as they appear in the source.\n"
+        ]
+
+        if conversation_history:
+            prompt_segments.append(
+                "=== Conversation History ===\n"
+                "------------------\n"
+                f"{conversation_history}\n"
+            )
+
+        prompt_segments.append(
+            "=== Retrieved Knowledge ===\n"
+            "-------------------\n"
+            f"{context_str}\n"
         )
 
+        prompt_segments.append(
+            "=== Current Question ===\n"
+            "----------------\n"
+            f"{question}\n"
+        )
+
+        prompt_segments.append("=== ANSWER ===")
+
+        prompt = "\n".join(prompt_segments)
         logger.debug(f"Generated prompt length: {len(prompt)} characters.")
         return prompt

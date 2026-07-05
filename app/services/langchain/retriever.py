@@ -20,7 +20,7 @@ class ChromaLangChainRetriever(BaseRetriever):
     chroma_service: Any = Field(description="The underlying ChromaService instance")
     embedding_service: Any = Field(description="The underlying EmbeddingService instance")
     owner_id: Optional[int] = Field(default=None, description="Optional owner ID filter")
-    document_id: Optional[int] = Field(default=None, description="Optional document ID filter")
+    document_id: Optional[Any] = Field(default=None, description="Optional document ID filter")
     top_k: int = Field(default=5, description="Number of results to retrieve")
 
     def _get_relevant_documents(

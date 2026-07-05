@@ -2,6 +2,7 @@
 # ----------------------
 # SQLAlchemy ORM model for Document metadata.
 
+from typing import List, Optional
 import uuid
 from datetime import datetime
 from sqlalchemy import String, DateTime, Integer, ForeignKey, func
@@ -40,6 +41,12 @@ class Document(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
+    workspace_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -55,6 +62,12 @@ class Document(Base):
 
     # Relationship to User
     owner: Mapped["User"] = relationship("User", back_populates="documents")
+    workspace: Mapped[Optional["Workspace"]] = relationship("Workspace", back_populates="documents")
+    collections: Mapped[List["Collection"]] = relationship(
+        "Collection",
+        secondary="document_collections",
+        back_populates="documents",
+    )
 
 
 # Inject bidirectional relationship on User model dynamically without modifying app/models/user.py

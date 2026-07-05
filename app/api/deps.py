@@ -113,3 +113,27 @@ def get_gemini_service() -> Any:
     return GeminiService()
 
 
+def get_conversation_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for ConversationService.
+    """
+    from app.services.conversation.conversation_service import ConversationService
+    return ConversationService(db)
+
+
+def get_collection_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for CollectionService.
+    """
+    from app.services.collection.collection_service import CollectionService
+    return CollectionService(db)
+
+
+def get_collection_filter_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for CollectionFilterService.
+    """
+    from app.services.collection.collection_filter_service import CollectionFilterService
+    return CollectionFilterService(db)
+
+

@@ -48,4 +48,6 @@ def get_embeddings(model_name: str = "models/gemini-embedding-001") -> GoogleGen
     Returns:
         GoogleGenerativeAIEmbeddings: The cached or newly initialized Gemini Embeddings wrapper.
     """
-    return _get_cached_embeddings(model_name)
+    embeddings = _get_cached_embeddings(model_name)
+    from app.services.langchain.retrieval_analytics_service import RetrievalAnalyticsService
+    return RetrievalAnalyticsService().wrap_embeddings(embeddings)
