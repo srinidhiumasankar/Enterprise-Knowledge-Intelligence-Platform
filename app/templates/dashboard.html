@@ -1,47 +1,469 @@
-{% extends "base.html" %}
+<!-- app/templates/dashboard.html -->
+{% extends "layouts/app.html" %}
 
-<!--
-  dashboard.html
-  --------------
-  Dashboard base layout template for the Enterprise Knowledge Intelligence Platform.
-  Removes default landing page header/footer, loads layout resources, and constructs the app container shell.
--->
+{% block app_title %}Workspace Dashboard - Enterprise Knowledge Intelligence Platform{% endblock %}
 
-{% block extra_head %}
-<!-- Dashboard layouts custom styles -->
-<link rel="stylesheet" href="{{ url_for('static', path='css/layout.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', path='css/sidebar.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', path='css/topbar.css') }}" />
-<link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}" />
-{% block dashboard_extra_head %}{% endblock %}
-{% endblock %}
-
-{% block header %}{% endblock %}
-
-{% block content %}
-<div class="app-container">
-  <!-- Sidebar Panel -->
-  {% include "partials/sidebar.html" %}
-
-  <!-- Main View Area -->
-  <div class="main-wrapper d-flex flex-column">
-    <!-- Top Navigation Bar -->
-    {% include "partials/topbar.html" %}
-
-    <!-- Scrollable main dashboard content container -->
-    <main class="content-wrapper flex-grow-1" id="dashboardMainArea">
-      {% block dashboard_content %}{% endblock %}
-    </main>
+{% block app_content %}
+<div class="container-fluid py-4 animate-fade-in-up">
+  
+  <!-- Header / Workspace Quick Glance -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 text-white fw-bold">Dashboard</h1>
+      <p class="text-muted mb-0">Welcome back! Here's what's happening across your workspace today.</p>
+    </div>
+    <div class="text-end">
+      <span class="badge bg-secondary-subtle text-white border border-secondary px-3 py-2 rounded-pill" id="lastActivityBadge">
+        Last Activity: loading...
+      </span>
+    </div>
   </div>
+
+  <!-- 5-Card Metrics Grid -->
+  <div class="row g-4 mb-4">
+    <!-- Documents Card -->
+    <div class="col-md-4 col-lg">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-success bg-opacity-15 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; flex-shrink: 0;">
+          <i class="bi bi-file-earmark-text-fill fs-3"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="text-muted text-uppercase small fw-bold mb-1 text-truncate">Documents</div>
+          <h3 class="text-white fw-bold mb-0" id="statDocsCount">0</h3>
+          <div class="small text-success text-truncate" id="statDocsToday">
+            <i class="bi bi-arrow-up-short"></i> 0 uploaded today
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Collections Card -->
+    <div class="col-md-4 col-lg">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-warning bg-opacity-15 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; flex-shrink: 0;">
+          <i class="bi bi-folder-fill fs-3"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="text-muted text-uppercase small fw-bold mb-1 text-truncate">Collections</div>
+          <h3 class="text-white fw-bold mb-0" id="statCollCount">0</h3>
+          <div class="small text-muted text-truncate" id="statCollLargest">Largest: None</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conversations Card -->
+    <div class="col-md-4 col-lg">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-primary bg-opacity-15 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; flex-shrink: 0;">
+          <i class="bi bi-chat-dots-fill fs-3"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="text-muted text-uppercase small fw-bold mb-1 text-truncate">Conversations</div>
+          <h3 class="text-white fw-bold mb-0" id="statConvCount">0</h3>
+          <div class="small text-muted text-truncate" id="statConvActiveArchived">0 Active / 0 Arc</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Searches Card -->
+    <div class="col-md-4 col-lg">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-info bg-opacity-15 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; flex-shrink: 0;">
+          <i class="bi bi-search fs-3"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="text-muted text-uppercase small fw-bold mb-1 text-truncate">Searches</div>
+          <h3 class="text-white fw-bold mb-0" id="statSearchCount">0</h3>
+          <div class="small text-info text-truncate" id="statSearchToday">0 searches today</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage Card -->
+    <div class="col-md-4 col-lg">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-danger bg-opacity-15 text-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; flex-shrink: 0;">
+          <i class="bi bi-hdd-network-fill fs-3"></i>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="text-muted text-uppercase small fw-bold mb-1 text-truncate">Storage</div>
+          <h3 class="text-white fw-bold mb-0" id="statStorageSize">0 B</h3>
+          <div class="small text-muted text-truncate" id="statStorageVector">Vector: 0 B</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Grid (2x2) -->
+  <div class="row g-4 mb-4">
+    <!-- Documents Uploaded Chart Card -->
+    <div class="col-lg-6">
+      <div class="dashboard-section-card d-flex flex-column" style="min-height: 320px;">
+        <h5 class="text-white fw-bold mb-3"><i class="bi bi-file-earmark-bar-graph me-2 text-success"></i>Documents Uploaded</h5>
+        <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center">
+          <canvas id="docsChart" style="max-height: 240px;"></canvas>
+          <div id="docsChartEmpty" class="position-absolute text-muted small d-none">No data available yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search Activity Chart Card -->
+    <div class="col-lg-6">
+      <div class="dashboard-section-card d-flex flex-column" style="min-height: 320px;">
+        <h5 class="text-white fw-bold mb-3"><i class="bi bi-activity me-2 text-info"></i>Search Activity</h5>
+        <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center">
+          <canvas id="searchChart" style="max-height: 240px;"></canvas>
+          <div id="searchChartEmpty" class="position-absolute text-muted small d-none">No data available yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conversation Growth Chart Card -->
+    <div class="col-lg-6">
+      <div class="dashboard-section-card d-flex flex-column" style="min-height: 320px;">
+        <h5 class="text-white fw-bold mb-3"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Conversation Growth</h5>
+        <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center">
+          <canvas id="convChart" style="max-height: 240px;"></canvas>
+          <div id="convChartEmpty" class="position-absolute text-muted small d-none">No data available yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Storage Usage Chart Card -->
+    <div class="col-lg-6">
+      <div class="dashboard-section-card d-flex flex-column" style="min-height: 320px;">
+        <h5 class="text-white fw-bold mb-3"><i class="bi bi-pie-chart-fill me-2 text-danger"></i>Storage Allocation</h5>
+        <div class="flex-grow-1 position-relative d-flex align-items-center justify-content-center">
+          <div style="width: 100%; max-width: 200px; max-height: 200px; margin: 0 auto;">
+            <canvas id="storageChart" style="max-height: 200px;"></canvas>
+          </div>
+          <div id="storageChartEmpty" class="position-absolute text-muted small d-none">No data available yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Layout: Workspace Details & Recent Activity -->
+  <div class="row g-4">
+    <!-- Left: Workspace Details Card -->
+    <div class="col-lg-5">
+      <div class="dashboard-section-card h-100">
+        <h5 class="text-white fw-bold mb-3 border-bottom border-secondary pb-2">
+          <i class="bi bi-briefcase me-2 text-primary"></i>Workspace Details
+        </h5>
+        <div class="row g-3 text-white small">
+          <div class="col-6 text-muted">Workspace Name</div>
+          <div class="col-6 text-end fw-semibold text-truncate" id="valWsName">loading...</div>
+          
+          <div class="col-6 text-muted">Owner</div>
+          <div class="col-6 text-end fw-semibold text-truncate" id="valWsOwner">loading...</div>
+
+          <div class="col-6 text-muted">Created Date</div>
+          <div class="col-6 text-end fw-semibold" id="valWsCreated">loading...</div>
+
+          <div class="col-6 text-muted">Default Workspace</div>
+          <div class="col-6 text-end fw-semibold text-success"><i class="bi bi-check-circle-fill me-1"></i>Yes</div>
+
+          <div class="col-6 text-muted">Document Count</div>
+          <div class="col-6 text-end fw-semibold" id="valDocCount">0</div>
+
+          <div class="col-6 text-muted">Collection Count</div>
+          <div class="col-6 text-end fw-semibold" id="valCollCountDetail">0</div>
+
+          <div class="col-6 text-muted">Conversation Count</div>
+          <div class="col-6 text-end fw-semibold" id="valConvCountDetail">0</div>
+
+          <div class="col-6 text-muted">Storage Used</div>
+          <div class="col-6 text-end fw-semibold" id="valStorageUsed">0 B</div>
+
+          <div class="col-6 text-muted">Embedding Model</div>
+          <div class="col-6 text-end fw-semibold text-info">text-embedding-3-small</div>
+
+          <div class="col-6 text-muted">Vector Database</div>
+          <div class="col-6 text-end fw-semibold text-info">ChromaDB (Local)</div>
+
+          <div class="col-6 text-muted">LLM Provider</div>
+          <div class="col-6 text-end fw-semibold text-info">OpenAI / LangChain</div>
+
+          <div class="col-6 text-muted">Last Activity</div>
+          <div class="col-6 text-end fw-semibold" id="valLastActivity">loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Recent Activity -->
+    <div class="col-lg-7">
+      <div class="dashboard-section-card h-100">
+        <h5 class="text-white fw-bold mb-3 border-bottom border-secondary pb-2">
+          <i class="bi bi-clock-history me-2 text-warning"></i>Recent Activity Stream
+        </h5>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle small mb-0">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Type</th>
+                <th>Description</th>
+                <th style="width: 140px;">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="activityTableBody">
+              <tr>
+                <td colspan="3" class="text-center text-muted py-4">No recent activity found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
-{% block footer %}{% endblock %}
+{% block app_extra_scripts %}
+<script>
+  (async () => {
+    if (typeof auth !== 'undefined' && typeof auth.protectRoute === 'function') {
+      await auth.protectRoute();
+    }
+  })();
 
-{% block extra_scripts %}
-<!-- Dashboard layouts scripts -->
-<script src="{{ url_for('static', path='js/navigation.js') }}"></script>
-<script src="{{ url_for('static', path='js/sidebar.js') }}"></script>
-<script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
-{% block dashboard_extra_scripts %}{% endblock %}
+  document.addEventListener("DOMContentLoaded", async () => {
+    try {
+      if (typeof api === 'undefined') {
+        console.error("API client not available");
+        return;
+      }
+      
+      const data = await api.get("/api/dashboard");
+      if (!data) return;
+
+      // Bind workspace overview
+      document.getElementById("lastActivityBadge").innerText = "Last Activity: " + new Date(data.overview.last_activity_at).toLocaleString();
+      document.getElementById("valWsName").innerText = data.overview.workspace_name;
+      document.getElementById("valWsOwner").innerText = data.overview.owner_name;
+      document.getElementById("valWsCreated").innerText = new Date(data.overview.created_at).toLocaleDateString();
+      document.getElementById("valLastActivity").innerText = new Date(data.overview.last_activity_at).toLocaleString();
+
+      // Bind primary card metrics
+      document.getElementById("statDocsCount").innerText = data.document_metrics.total_documents;
+      document.getElementById("statDocsToday").innerText = data.document_metrics.uploaded_today + " uploaded today";
+      document.getElementById("valDocCount").innerText = data.document_metrics.total_documents;
+      
+      document.getElementById("statCollCount").innerText = data.collection_metrics.total_collections;
+      document.getElementById("valCollCountDetail").innerText = data.collection_metrics.total_collections;
+      if (data.collection_metrics.largest_collection_name) {
+        document.getElementById("statCollLargest").innerText = "Largest: " + data.collection_metrics.largest_collection_name;
+      } else {
+        document.getElementById("statCollLargest").innerText = "Largest: None";
+      }
+
+      document.getElementById("statConvCount").innerText = data.conversation_metrics.total_conversations;
+      document.getElementById("valConvCountDetail").innerText = data.conversation_metrics.total_conversations;
+      document.getElementById("statConvActiveArchived").innerText = `${data.conversation_metrics.active_conversations} Active / ${data.conversation_metrics.archived_conversations} Arc`;
+
+      document.getElementById("statSearchCount").innerText = data.search_metrics.searches_today;
+      document.getElementById("statSearchToday").innerText = data.search_metrics.searches_today + " searches today";
+
+      // Formatted Storage Size
+      const formatBytes = (bytes) => {
+        if (!bytes) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      };
+
+      const totalStorage = data.storage_metrics.total_storage_bytes;
+      document.getElementById("statStorageSize").innerText = formatBytes(totalStorage);
+      document.getElementById("valStorageUsed").innerText = formatBytes(totalStorage);
+      document.getElementById("statStorageVector").innerText = "Vector: " + formatBytes(data.storage_metrics.vector_db_size_bytes);
+
+      // Render recent activity list
+      const activityTable = document.getElementById("activityTableBody");
+      if (data.recent_activity && data.recent_activity.length > 0) {
+        activityTable.innerHTML = "";
+        data.recent_activity.forEach(item => {
+          let badgeClass = "bg-success bg-opacity-15 text-success";
+          let icon = "bi-cloud-upload-fill";
+          
+          if (item.type === "search_query") {
+            badgeClass = "bg-info bg-opacity-15 text-info";
+            icon = "bi-search";
+          } else if (item.type === "conversation_start") {
+            badgeClass = "bg-primary bg-opacity-15 text-primary";
+            icon = "bi-chat-dots-fill";
+          } else if (item.type === "collection_update") {
+            badgeClass = "bg-warning bg-opacity-15 text-warning";
+            icon = "bi-folder-fill";
+          }
+
+          const tr = document.createElement("tr");
+          tr.style.transition = "background-color 0.2s ease";
+          tr.innerHTML = `
+            <td>
+              <span class="badge ${badgeClass} p-2 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                <i class="bi ${icon}"></i>
+              </span>
+            </td>
+            <td class="text-white font-semibold">${item.description}</td>
+            <td class="text-muted small">${new Date(item.timestamp).toLocaleString()}</td>
+          `;
+          activityTable.appendChild(tr);
+        });
+      }
+
+      // Initialize Chart.js Analytics
+      const allZero = (...args) => args.every(val => !val || val === 0);
+
+      // 1. Documents Bar Chart
+      const docCount = data.document_metrics.total_documents;
+      const docToday = data.document_metrics.uploaded_today;
+      const docWeek = data.document_metrics.uploaded_this_week;
+      
+      if (allZero(docCount, docToday, docWeek)) {
+        document.getElementById("docsChart").classList.add("d-none");
+        document.getElementById("docsChartEmpty").classList.remove("d-none");
+      } else {
+        new Chart(document.getElementById("docsChart"), {
+          type: 'bar',
+          data: {
+            labels: ['Today', 'This Week', 'Total Documents'],
+            datasets: [{
+              label: 'Documents',
+              data: [docToday, docWeek, docCount],
+              backgroundColor: 'rgba(76, 175, 80, 0.4)',
+              borderColor: '#4caf50',
+              borderWidth: 1.5,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 2. Search Activity Line Chart
+      const searchToday = data.search_metrics.searches_today;
+      const searchWeek = data.search_metrics.searches_this_week;
+      const avgLatency = data.search_metrics.average_retrieval_time_ms;
+
+      if (allZero(searchToday, searchWeek, avgLatency)) {
+        document.getElementById("searchChart").classList.add("d-none");
+        document.getElementById("searchChartEmpty").classList.remove("d-none");
+      } else {
+        new Chart(document.getElementById("searchChart"), {
+          type: 'line',
+          data: {
+            labels: ['Searches Today', 'Searches This Week', 'Avg Latency (ms)'],
+            datasets: [{
+              label: 'Search Metrics',
+              data: [searchToday, searchWeek, avgLatency],
+              backgroundColor: 'rgba(0, 188, 212, 0.2)',
+              borderColor: '#00bcd4',
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 3. Conversation Growth Area Chart
+      const convActive = data.conversation_metrics.active_conversations;
+      const convArchived = data.conversation_metrics.archived_conversations;
+      const convMessages = data.conversation_metrics.total_messages;
+
+      if (allZero(convActive, convArchived, convMessages)) {
+        document.getElementById("convChart").classList.add("d-none");
+        document.getElementById("convChartEmpty").classList.remove("d-none");
+      } else {
+        new Chart(document.getElementById("convChart"), {
+          type: 'line',
+          data: {
+            labels: ['Active Threads', 'Archived Threads', 'Messages Sent'],
+            datasets: [{
+              label: 'Activity Volume',
+              data: [convActive, convArchived, convMessages],
+              backgroundColor: 'rgba(92, 107, 192, 0.25)',
+              borderColor: '#5c6bc0',
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // 4. Storage Allocation Doughnut Chart
+      const vectorDbSize = data.storage_metrics.vector_db_size_bytes;
+      const docFilesSize = Math.max(0, totalStorage - vectorDbSize);
+
+      if (allZero(totalStorage, vectorDbSize)) {
+        document.getElementById("storageChart").classList.add("d-none");
+        document.getElementById("storageChartEmpty").classList.remove("d-none");
+      } else {
+        new Chart(document.getElementById("storageChart"), {
+          type: 'doughnut',
+          data: {
+            labels: ['Document Storage', 'Vector Database'],
+            datasets: [{
+              data: [docFilesSize, vectorDbSize],
+              backgroundColor: [
+                'rgba(233, 30, 99, 0.6)',
+                'rgba(156, 39, 176, 0.6)'
+              ],
+              borderColor: [
+                '#e91e63',
+                '#9c27b0'
+              ],
+              borderWidth: 1.5
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#fff', boxWidth: 12 }
+              }
+            }
+          }
+        });
+      }
+
+    } catch (e) {
+      console.error("Failed to load dashboard metrics: ", e);
+      if (typeof window.showToast === 'function') {
+        window.showToast("Failed to fetch dashboard metrics. Please reload.", "error");
+      }
+    }
+  });
+</script>
 {% endblock %}

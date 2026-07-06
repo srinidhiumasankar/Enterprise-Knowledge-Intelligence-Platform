@@ -25,8 +25,11 @@ class CollectionService:
 
     def _validate_workspace(self, user_id: int, workspace_id: Optional[int]) -> int:
         """
-        Confirms workspace belongs to the user, or falls back to user default.
+        Confirms workspace belongs to the user, or returns the current active workspace.
         """
+        from app.services.workspace.workspace_context_service import WorkspaceContextService
+        ctx_service = WorkspaceContextService(self.db)
+
         if workspace_id is not None:
             workspace = self.db.scalar(select(Workspace).where(Workspace.id == workspace_id))
             if not workspace:
@@ -35,23 +38,9 @@ class CollectionService:
                 raise PermissionError("Unauthorized access to workspace")
             return workspace.id
 
-        # Fallback to first workspace
-        first_ws = self.db.scalars(select(Workspace).where(Workspace.owner_id == user_id)).first()
-        if first_ws:
-            return first_ws.id
-
-        # Auto-create default workspace
-        new_ws = Workspace(
-            owner_id=user_id,
-            name="Default Workspace",
-            description="Auto-generated default workspace",
-            is_default=True,
-            is_active=True
-        )
-        self.db.add(new_ws)
-        self.db.commit()
-        self.db.refresh(new_ws)
-        return new_ws.id
+        # Fallback to current active workspace
+        active_ws = ctx_service.get_active_workspace(user_id)
+        return active_ws.id
 
     def create_collection(
         self,
@@ -113,11 +102,18 @@ class CollectionService:
         logger.info(f"Collection deleted: id={collection_id}")
         return res
 
-    def list_collections(self, owner_id: int, page: int = 1, page_size: int = 20) -> Tuple[List[Collection], int]:
+    def list_collections(
+        self,
+        owner_id: int,
+        page: int = 1,
+        page_size: int = 20,
+        workspace_id: Optional[int] = None
+    ) -> Tuple[List[Collection], int]:
         """
         Returns paginated list of collection entries owned by user.
         """
-        return self.repo.list(owner_id, page, page_size)
+        validated_ws_id = self._validate_workspace(owner_id, workspace_id)
+        return self.repo.list(owner_id, page, page_size, workspace_id=validated_ws_id)
 
     def add_document(self, collection_id: int, owner_id: int, document_id: int) -> bool:
         """

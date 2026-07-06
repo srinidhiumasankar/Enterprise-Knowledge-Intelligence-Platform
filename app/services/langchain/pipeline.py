@@ -55,7 +55,7 @@ class RetrievalPipeline:
         if not session_id:
             session_id = f"owner_{owner_id}" if owner_id else "default_session"
 
-        # Collection and Workspace filtering integration
+        # Workspace resolution and isolation verification
         if isinstance(user_context, dict):
             collection_ids = user_context.get("collection_ids")
             workspace_id = user_context.get("workspace_id")
@@ -63,36 +63,34 @@ class RetrievalPipeline:
             collection_ids = getattr(user_context, "collection_ids", None)
             workspace_id = getattr(user_context, "workspace_id", None)
 
-        from app.config import settings
-        enable_filtering = getattr(settings, "ENABLE_COLLECTION_FILTERING", True)
+        from app.database import SessionLocal
+        from app.services.workspace.workspace_service import WorkspaceService
+        from app.services.collection.collection_filter_service import CollectionFilterService
 
-        if enable_filtering and (collection_ids is not None or workspace_id is not None):
-            from app.database import SessionLocal
-            from app.services.collection.collection_filter_service import CollectionFilterService
-            from sqlalchemy import select
+        db = SessionLocal()
+        try:
+            ws_service = WorkspaceService(db)
+            if owner_id:
+                if not workspace_id:
+                    ws = ws_service.get_active_workspace(owner_id)
+                    workspace_id = ws.id
+                else:
+                    ws_service.validate_workspace_ownership(owner_id, workspace_id)
 
-            db = SessionLocal()
-            try:
-                # Attempt to resolve workspace_id from owner_id if not present
-                if not workspace_id and owner_id:
-                    from app.models.workspace import Workspace
-                    ws = db.scalars(select(Workspace).where(Workspace.owner_id == owner_id)).first()
-                    workspace_id = ws.id if ws else None
-
-                if workspace_id:
-                    filter_service = CollectionFilterService(db)
-                    resolved_doc_ids = filter_service.validate_and_resolve_filters(
-                        user_id=owner_id,
-                        workspace_id=workspace_id,
-                        collection_ids=collection_ids
-                    )
-                    # Override document_id filter scope
-                    if len(resolved_doc_ids) == 1:
-                        document_id = resolved_doc_ids[0]
-                    else:
-                        document_id = {"$in": resolved_doc_ids}
-            finally:
-                db.close()
+            # Resolve document filter scope for this workspace
+            if workspace_id and owner_id:
+                filter_service = CollectionFilterService(db)
+                resolved_doc_ids = filter_service.validate_and_resolve_filters(
+                    user_id=owner_id,
+                    workspace_id=workspace_id,
+                    collection_ids=collection_ids
+                )
+                if len(resolved_doc_ids) == 1:
+                    document_id = resolved_doc_ids[0]
+                else:
+                    document_id = {"$in": resolved_doc_ids}
+        finally:
+            db.close()
 
         # 0. Start Retrieval Analytics
         from app.services.langchain.retrieval_analytics import RetrievalAnalytics
@@ -210,6 +208,49 @@ class RetrievalPipeline:
 
         # 7. Finish Health Monitoring
         monitor.finish_monitoring()
+
+        # 8. Record search history asynchronously in background thread
+        try:
+            from app.config import settings
+            enable_history = getattr(settings, "ENABLE_SEARCH_HISTORY", True)
+            if enable_history and owner_id and workspace_id:
+                import threading
+                from app.database import SessionLocal
+                from app.services.search_history.search_history_service import SearchHistoryService
+
+                if isinstance(user_context, dict):
+                    conversation_id = user_context.get("conversation_id")
+                else:
+                    conversation_id = getattr(user_context, "conversation_id", None)
+
+                result_count = len(results) if results else 0
+                filters_json = {
+                    "conversation_id": conversation_id,
+                    "collection_ids": collection_ids
+                }
+
+                def bg_record():
+                    db_bg = SessionLocal()
+                    try:
+                        sh_service = SearchHistoryService(db_bg)
+                        sh_service.record_search(
+                            user_id=owner_id,
+                            workspace_id=workspace_id,
+                            query=query,
+                            filters_json=filters_json,
+                            execution_time_ms=int(latency_ms),
+                            result_count=result_count
+                        )
+                    except Exception as bg_e:
+                        logger.error(f"Failed to record search history in background: {bg_e}")
+                    finally:
+                        db_bg.close()
+
+                thread = threading.Thread(target=bg_record)
+                thread.daemon = True
+                thread.start()
+        except Exception as e:
+            logger.error(f"Failed to trigger search history background recording: {e}")
 
         return results
 

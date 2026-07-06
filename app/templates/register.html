@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "layouts/public.html" %}
 
-{% block title %}Register - Enterprise Knowledge Intelligence Platform{% endblock %}
+{% block public_title %}Register - Enterprise Knowledge Intelligence Platform{% endblock %}
 
 {% block body_class %}auth-body{% endblock %}
 
-{% block extra_head %}
+{% block public_extra_head %}
 <script>
   (async () => {
     // Redirect to dashboard immediately if already authenticated
@@ -13,8 +13,8 @@
 </script>
 {% endblock %}
 
-{% block content %}
-<div class="container d-flex justify-content-center align-items-center flex-grow-1 py-5 animate-fade-in">
+{% block public_content %}
+<div class="container d-flex justify-content-center align-items-center flex-grow-1 py-5 animate-fade-in" style="min-height: calc(100vh - 120px);">
   <div class="card glass-card border-0 rounded-4 shadow-lg">
     <div class="card-body p-4 p-md-5">
       
@@ -24,7 +24,7 @@
           <i class="bi bi-person-plus-fill fs-2"></i>
         </div>
         <h4 class="fw-bold text-white mb-1">Create Account</h4>
-        <p class="text-muted small">Access the Enterprise Knowledge Intelligence Suite</p>
+        <p class="text-white-50 small">Access the Enterprise Knowledge Intelligence Suite</p>
       </div>
 
       <!-- Alert Placeholder -->
@@ -40,7 +40,7 @@
       <form id="registerForm" novalidate>
         <!-- Full Name Input -->
         <div class="mb-3">
-          <label for="fullName" class="form-label small fw-semibold text-muted mb-2">Full Name</label>
+          <label for="fullName" class="form-label small fw-semibold text-light mb-2">Full Name</label>
           <div class="auth-input-group">
             <input 
               type="text" 
@@ -57,7 +57,7 @@
 
         <!-- Email Input -->
         <div class="mb-3">
-          <label for="registerEmail" class="form-label small fw-semibold text-muted mb-2">Email Address</label>
+          <label for="registerEmail" class="form-label small fw-semibold text-light mb-2">Email Address</label>
           <div class="auth-input-group">
             <input 
               type="email" 
@@ -75,7 +75,7 @@
 
         <!-- Password Input -->
         <div class="mb-3">
-          <label for="registerPassword" class="form-label small fw-semibold text-muted mb-2">Password</label>
+          <label for="registerPassword" class="form-label small fw-semibold text-light mb-2">Password</label>
           <div class="auth-input-group">
             <input 
               type="password" 
@@ -96,15 +96,15 @@
               <div id="strengthBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
             </div>
             <div class="d-flex justify-content-between align-items-center mt-1">
-              <span id="strengthText" class="xsmall text-muted fw-medium">Strength: None</span>
-              <span class="xsmall text-muted">Min. 8 characters</span>
+              <span id="strengthText" class="xsmall text-white-50 fw-medium">Strength: None</span>
+              <span class="xsmall text-white-50">Min. 8 characters</span>
             </div>
           </div>
         </div>
 
         <!-- Confirm Password Input -->
         <div class="mb-4">
-          <label for="confirmPassword" class="form-label small fw-semibold text-muted mb-2">Confirm Password</label>
+          <label for="confirmPassword" class="form-label small fw-semibold text-light mb-2">Confirm Password</label>
           <div class="auth-input-group">
             <input 
               type="password" 
@@ -129,7 +129,7 @@
 
       <!-- Redirect to Sign In -->
       <div class="text-center mt-4">
-        <p class="small text-muted mb-0">
+        <p class="small text-white-50 mb-0">
           Already have an account? <a href="/login" class="text-primary fw-semibold text-decoration-none">Sign In</a>
         </p>
       </div>

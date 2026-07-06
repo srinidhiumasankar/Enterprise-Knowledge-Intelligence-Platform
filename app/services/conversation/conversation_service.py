@@ -26,8 +26,11 @@ class ConversationService:
 
     def _validate_workspace(self, user_id: int, workspace_id: Optional[int]) -> int:
         """
-        Validates workspace access, or constructs a default workspace for the user if none exists.
+        Validates workspace access, or returns the current active workspace.
         """
+        from app.services.workspace.workspace_context_service import WorkspaceContextService
+        ctx_service = WorkspaceContextService(self.db)
+
         if workspace_id is not None:
             workspace = self.db.scalar(select(Workspace).where(Workspace.id == workspace_id))
             if not workspace:
@@ -38,40 +41,9 @@ class ConversationService:
                 raise PermissionError("Unauthorized access to workspace")
             return workspace.id
 
-        # Fallback 1: Check user preference default workspace
-        pref = self.db.scalar(select(UserPreference).where(UserPreference.user_id == user_id))
-        if pref and pref.default_workspace:
-            ws_id = pref.default_workspace
-            # Validate preference workspace exists
-            ws = self.db.scalar(select(Workspace).where(Workspace.id == ws_id))
-            if ws and ws.owner_id == user_id:
-                return ws_id
-
-        # Fallback 2: Check first workspace owned by user
-        first_ws = self.db.scalars(select(Workspace).where(Workspace.owner_id == user_id)).first()
-        if first_ws:
-            return first_ws.id
-
-        # Fallback 3: Automatically initialize a new default workspace
-        new_ws = Workspace(
-            owner_id=user_id,
-            name="Default Workspace",
-            description="Auto-generated default workspace",
-            is_default=True,
-            is_active=True
-        )
-        self.db.add(new_ws)
-        self.db.commit()
-        self.db.refresh(new_ws)
-        
-        # Save to preference as default
-        if pref:
-            pref.default_workspace = new_ws.id
-            self.db.add(pref)
-            self.db.commit()
-            
-        logger.info(f"Auto-created default Workspace {new_ws.id} for user {user_id}")
-        return new_ws.id
+        # Fallback to current active workspace
+        active_ws = ctx_service.get_active_workspace(user_id)
+        return active_ws.id
 
     def create_conversation(
         self,
@@ -106,11 +78,19 @@ class ConversationService:
             raise PermissionError("Unauthorized access to conversation")
         return conv
 
-    def list_conversations(self, user_id: int, page: int = 1, page_size: int = 20) -> Tuple[List[Conversation], int]:
+    def list_conversations(
+        self,
+        user_id: int,
+        workspace_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[List[Conversation], int]:
         """
         Retrieves a paginated list of non-deleted conversations belonging to a user.
         """
-        return self.repo.list_user_conversations(user_id, page, page_size, include_deleted=False)
+        if workspace_id is not None:
+            self._validate_workspace(user_id, workspace_id)
+        return self.repo.list_user_conversations(user_id, page, page_size, include_deleted=False, workspace_id=workspace_id)
 
     def append_message(
         self,
@@ -221,27 +201,34 @@ class ConversationService:
             logger.info(f"Conversation unarchived: id={conversation_id}")
         return res
 
-    def get_pinned_conversations(self, user_id: int) -> List[Conversation]:
+    def get_pinned_conversations(self, user_id: int, workspace_id: Optional[int] = None) -> List[Conversation]:
         """
         Retrieves all pinned active conversations for the user.
         """
-        return self.repo.list_pinned(user_id)
+        if workspace_id is not None:
+            self._validate_workspace(user_id, workspace_id)
+        return self.repo.list_pinned(user_id, workspace_id=workspace_id)
 
-    def get_archived_conversations(self, user_id: int) -> List[Conversation]:
+    def get_archived_conversations(self, user_id: int, workspace_id: Optional[int] = None) -> List[Conversation]:
         """
         Retrieves all archived active conversations for the user.
         """
-        return self.repo.list_archived(user_id)
+        if workspace_id is not None:
+            self._validate_workspace(user_id, workspace_id)
+        return self.repo.list_archived(user_id, workspace_id=workspace_id)
 
     def search_conversations(
         self,
         user_id: int,
         keyword: str,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
+        workspace_id: Optional[int] = None
     ) -> Tuple[List[Conversation], int]:
         """
         Executes paginated database query search matching keyword across titles and message bodies.
         """
-        logger.info(f"Search request: user={user_id}, keyword='{keyword}', page={page}, page_size={page_size}")
-        return self.repo.search(user_id, keyword, page, page_size)
+        logger.info(f"Search request: user={user_id}, keyword='{keyword}', page={page}, page_size={page_size}, workspace={workspace_id}")
+        if workspace_id is not None:
+            self._validate_workspace(user_id, workspace_id)
+        return self.repo.search(user_id, keyword, page, page_size, workspace_id=workspace_id)

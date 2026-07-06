@@ -83,11 +83,13 @@ class CollectionRepository:
             select(Collection.id).where(Collection.workspace_id == workspace_id, Collection.name == name)
         ) is not None
 
-    def list(self, owner_id: int, page: int = 1, page_size: int = 20) -> Tuple[List[Collection], int]:
+    def list(self, owner_id: int, page: int = 1, page_size: int = 20, workspace_id: Optional[int] = None) -> Tuple[List[Collection], int]:
         """
         Lists collections belonging to an owner.
         """
         query = select(Collection).where(Collection.owner_id == owner_id)
+        if workspace_id is not None:
+            query = query.where(Collection.workspace_id == workspace_id)
         
         # Count
         count_query = select(func.count()).select_from(query.subquery())

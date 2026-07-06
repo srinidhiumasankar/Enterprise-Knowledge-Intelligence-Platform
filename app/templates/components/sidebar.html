@@ -1,0 +1,25 @@
+<!-- app/templates/components/sidebar.html -->
+<aside class="sidebar-wrapper" id="sidebar" aria-label="Sidebar Navigation">
+  <div class="sidebar-header d-flex align-items-center justify-content-between">
+    <a href="/dashboard" class="sidebar-brand d-flex align-items-center gap-2 text-decoration-none">
+      <div class="brand-icon" aria-hidden="true">
+        <i class="bi bi-cpu-fill"></i>
+      </div>
+      <span class="brand-name-text fw-bold text-white">EKIP Suite</span>
+    </a>
+    <button type="button" class="btn-close-sidebar-mobile d-md-none" id="btnSidebarCloseMobile" aria-label="Close sidebar">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav flex-grow-1 d-flex flex-column py-3">
+    {% include "partials/navigation.html" %}
+  </nav>
+
+  <div class="sidebar-collapse-toggle-wrapper d-none d-md-flex">
+    <button type="button" class="btn-sidebar-collapse" id="btnSidebarCollapse" aria-label="Collapse sidebar">
+      <i class="bi bi-chevron-left" id="collapseIcon"></i>
+    </button>
+  </div>
+</aside>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>

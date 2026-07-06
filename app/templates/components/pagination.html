@@ -1,0 +1,22 @@
+<!-- app/templates/components/pagination.html -->
+{% macro pagination(current_page, total_pages, on_change_func) %}
+<nav aria-label="Page navigation" class="mt-4">
+  <ul class="pagination justify-content-center">
+    <li class="page-item {% if current_page <= 1 %}disabled{% endif %}">
+      <a class="page-link bg-dark border-secondary text-white" href="#" onclick="event.preventDefault(); {{ on_change_func }}({{ current_page - 1 }});" aria-label="Previous">
+        <span aria-hidden="true">&laquo;</span>
+      </a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {% if p == current_page %}active{% endif %}">
+      <a class="page-link {% if p == current_page %}bg-primary border-primary{% else %}bg-dark border-secondary text-white{% endif %}" href="#" onclick="event.preventDefault(); {{ on_change_func }}({{ p }});">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {% if current_page >= total_pages %}disabled{% endif %}">
+      <a class="page-link bg-dark border-secondary text-white" href="#" onclick="event.preventDefault(); {{ on_change_func }}({{ current_page + 1 }});" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endmacro %}

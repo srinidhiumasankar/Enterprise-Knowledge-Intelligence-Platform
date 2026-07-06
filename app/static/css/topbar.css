@@ -50,7 +50,7 @@
   font-size: 0.875rem;
   height: 38px;
   transition: all var(--transition-fast);
-  cursor: not-allowed;
+  cursor: text;
 }
 
 .topbar-search-wrapper .search-input::placeholder {

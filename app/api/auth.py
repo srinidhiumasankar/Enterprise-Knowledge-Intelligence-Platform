@@ -38,7 +38,13 @@ async def register(
     try:
         user_service = UserService(UserRepository(db))
         user = user_service.create_user(user_in)
-        logger.info(f"Successful registration for email: '{user_in.email}' (UUID: {user.uuid})")
+        
+        # Provision default workspace
+        from app.services.workspace.workspace_service import WorkspaceService
+        ws_service = WorkspaceService(db)
+        ws_service.get_default_workspace(user.id)
+
+        logger.info(f"Successful registration and workspace provisioning for email: '{user_in.email}' (UUID: {user.uuid})")
         return user
     except HTTPException as he:
         logger.warning(f"Failed registration for email '{user_in.email}': {he.detail}")

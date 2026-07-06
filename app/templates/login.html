@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "layouts/public.html" %}
 
-{% block title %}Sign In - Enterprise Knowledge Intelligence Platform{% endblock %}
+{% block public_title %}Sign In - Enterprise Knowledge Intelligence Platform{% endblock %}
 
 {% block body_class %}auth-body{% endblock %}
 
-{% block extra_head %}
+{% block public_extra_head %}
 <script>
   (async () => {
     // Redirect to dashboard immediately if already authenticated
@@ -13,8 +13,8 @@
 </script>
 {% endblock %}
 
-{% block content %}
-<div class="container d-flex justify-content-center align-items-center flex-grow-1 py-5 animate-fade-in">
+{% block public_content %}
+<div class="container d-flex justify-content-center align-items-center flex-grow-1 py-5 animate-fade-in" style="min-height: calc(100vh - 120px);">
   <div class="card glass-card border-0 rounded-4 shadow-lg">
     <div class="card-body p-4 p-md-5">
       
@@ -24,7 +24,7 @@
           <i class="bi bi-shield-lock-fill fs-2"></i>
         </div>
         <h4 class="fw-bold text-white mb-1">Welcome Back</h4>
-        <p class="text-muted small">Sign in to manage your enterprise knowledge bases</p>
+        <p class="text-white-50 small">Sign in to manage your enterprise knowledge bases</p>
       </div>
 
       <!-- Alert placeholder -->
@@ -40,7 +40,7 @@
       <form id="loginForm" novalidate>
         <!-- Email Input -->
         <div class="mb-4">
-          <label for="loginEmail" class="form-label small fw-semibold text-muted mb-2">Email Address</label>
+          <label for="loginEmail" class="form-label small fw-semibold text-light mb-2">Email Address</label>
           <div class="auth-input-group">
             <input 
               type="email" 
@@ -59,7 +59,7 @@
         <!-- Password Input -->
         <div class="mb-4">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <label for="loginPassword" class="form-label small fw-semibold text-muted mb-0">Password</label>
+            <label for="loginPassword" class="form-label small fw-semibold text-light mb-0">Password</label>
             <a href="#" class="text-primary small text-decoration-none fw-medium" onclick="event.preventDefault(); window.showToast('Password recovery is not implemented in this phase.', 'warning');">Forgot password?</a>
           </div>
           <div class="auth-input-group">
@@ -81,7 +81,7 @@
         <div class="mb-4">
           <div class="form-check">
             <input type="checkbox" class="form-check-input" id="rememberMe" />
-            <label class="form-check-label small text-muted user-select-none" for="rememberMe">Remember me</label>
+            <label class="form-check-label small text-white-50 user-select-none" for="rememberMe">Remember me</label>
           </div>
         </div>
 
@@ -94,7 +94,7 @@
 
       <!-- Registration Redirect -->
       <div class="text-center mt-4">
-        <p class="small text-muted mb-0">
+        <p class="small text-white-50 mb-0">
           New to EKIP? <a href="/register" class="text-primary fw-semibold text-decoration-none">Create an account</a>
         </p>
       </div>

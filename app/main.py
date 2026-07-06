@@ -37,6 +37,10 @@ from app.api.debug import router as debug_router
 from app.api.conversation import router as conversation_router
 from app.api.collection import router as collection_router
 from app.api.retrieval import router as retrieval_router
+from app.api.workspace_context import router as workspace_context_router
+from app.api.workspace import router as workspace_router
+from app.api.search_history import router as search_history_router
+from app.api.dashboard import router as dashboard_router
 
 app.include_router(auth_router)
 app.include_router(upload_router)
@@ -45,6 +49,10 @@ app.include_router(debug_router)
 app.include_router(conversation_router)
 app.include_router(collection_router)
 app.include_router(retrieval_router)
+app.include_router(workspace_context_router)
+app.include_router(workspace_router)
+app.include_router(search_history_router)
+app.include_router(dashboard_router)
 
 # ---------------------------------------------------------------------------
 # Static files — served at /static
@@ -107,4 +115,76 @@ async def register_page(request: Request) -> HTMLResponse:
         request=request,
         name="register.html",
         context={"title": "Register - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request) -> HTMLResponse:
+    """
+    Render the Workspace Dashboard UI page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={"title": "Workspace Dashboard - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/conversations", response_class=HTMLResponse)
+async def conversations_page(request: Request) -> HTMLResponse:
+    """
+    Render the Conversations UI page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="conversations.html",
+        context={"title": "Conversations - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/collections", response_class=HTMLResponse)
+async def collections_page(request: Request) -> HTMLResponse:
+    """
+    Render the Collections UI page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="collections.html",
+        context={"title": "Collections - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/documents", response_class=HTMLResponse)
+async def documents_page(request: Request) -> HTMLResponse:
+    """
+    Render the Documents UI page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="documents.html",
+        context={"title": "Documents - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/workspaces", response_class=HTMLResponse)
+async def workspaces_page(request: Request) -> HTMLResponse:
+    """
+    Render the Workspaces UI page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="workspaces.html",
+        context={"title": "Workspaces - Enterprise Knowledge Intelligence Platform"},
+    )
+
+
+@app.get("/search-history", response_class=HTMLResponse)
+async def search_history_page(request: Request) -> HTMLResponse:
+    """
+    Render the Search History UI page.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="search_history.html",
+        context={"title": "Search History - Enterprise Knowledge Intelligence Platform"},
     )

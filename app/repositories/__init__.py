@@ -1,2 +1,5 @@
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.collection_repository import CollectionRepository
+from app.repositories.workspace_repository import WorkspaceRepository
+from app.repositories.search_history_repository import SearchHistoryRepository
+from app.repositories.dashboard_repository import DashboardRepository

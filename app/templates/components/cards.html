@@ -1,0 +1,13 @@
+<!-- app/templates/components/cards.html -->
+{% macro metric_card(title, value, subtitle, icon, color="primary") %}
+<div class="metric-card">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <div class="text-muted text-uppercase small fw-bold mb-2">{{ title }}</div>
+      <h3 class="text-white fw-bold mb-1">{{ value }}</h3>
+      <div class="small text-{{ color }}">{{ subtitle }}</div>
+    </div>
+    <div class="card-icon text-{{ color }}"><i class="bi {{ icon }}"></i></div>
+  </div>
+</div>
+{% endmacro %}

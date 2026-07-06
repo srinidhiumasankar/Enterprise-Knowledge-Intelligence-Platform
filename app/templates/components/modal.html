@@ -1,0 +1,36 @@
+<!-- app/templates/components/modal.html -->
+{% macro modal(id, title, size="md") %}
+<div class="modal fade" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}Label" aria-hidden="true">
+  <div class="modal-dialog modal-{{ size }} modal-dialog-centered">
+    <div class="modal-content bg-dark border border-secondary text-white" style="backdrop-filter: blur(15px); background: rgba(30, 31, 46, 0.95);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title fw-bold text-white" id="{{ id }}Label">{{ title }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {{ caller() }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro confirm_modal(id, title, message, action_id, action_text="Confirm", action_class="btn-danger") %}
+<div class="modal fade" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}Label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark border border-secondary text-white" style="backdrop-filter: blur(15px); background: rgba(30, 31, 46, 0.95);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title fw-bold text-white" id="{{ id }}Label">{{ title }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">{{ message }}</p>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn {{ action_class }}" id="{{ action_id }}">{{ action_text }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}

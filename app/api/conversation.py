@@ -63,7 +63,16 @@ def list_conversations(
     Retrieves a paginated listing of non-deleted, non-archived conversations belonging to the current user.
     """
     try:
-        items, total = service.list_conversations(current_user.id, page, page_size)
+        from app.services.workspace.workspace_context_service import WorkspaceContextService
+        ctx_service = WorkspaceContextService(service.repo.db)
+        active_ws = ctx_service.get_active_workspace(current_user.id)
+
+        items, total = service.list_conversations(
+            user_id=current_user.id,
+            workspace_id=active_ws.id,
+            page=page,
+            page_size=page_size
+        )
         total_pages = (total + page_size - 1) // page_size if total > 0 else 0
         return {
             "items": items,

@@ -21,12 +21,23 @@
   <div class="topbar-search-wrapper flex-grow-1 mx-3 mx-md-4" style="max-width: 480px;">
     <div class="position-relative search-container">
       <i class="bi bi-search search-icon position-absolute top-50 translate-middle-y start-3 text-muted"></i>
-      <input type="text" class="form-control search-input ps-5 border-0 rounded-3 text-white bg-dark bg-opacity-50" placeholder="Search knowledge base... (Ctrl + /)" disabled readonly>
+      <input type="text" id="global-search-input" class="form-control search-input ps-5 border-0 rounded-3 text-white bg-dark bg-opacity-50" placeholder="Search knowledge base...">
     </div>
   </div>
 
-  <!-- Right Side: Notifications & Profile Dropdown -->
+  <!-- Right Side: Workspace Switcher, Notifications & Profile Dropdown -->
   <div class="d-flex align-items-center gap-3">
+    <!-- Workspace Selector Dropdown -->
+    <div class="dropdown" id="navbarWorkspaceSelector">
+      <button class="btn btn-outline-secondary dropdown-toggle text-white d-flex align-items-center gap-2 py-1 px-3" type="button" id="wsSelectorBtn" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-briefcase-fill text-primary"></i>
+        <span id="activeWorkspaceName">Active Workspace</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2 p-2 dropdown-glass" id="wsSelectorDropdownList" aria-labelledby="wsSelectorBtn" style="width: 240px;">
+        <li><h6 class="dropdown-header text-white border-bottom border-secondary-subtle pb-2 mb-2">Switch Workspace</h6></li>
+      </ul>
+    </div>
+
     <!-- Notifications -->
     <div class="dropdown" id="notificationDropdownContainer">
       <button class="btn btn-icon-only text-muted position-relative" type="button" id="btnNotifications" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications">

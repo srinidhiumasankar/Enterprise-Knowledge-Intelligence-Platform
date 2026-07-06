@@ -1,0 +1,7 @@
+<!-- app/templates/components/search_bar.html -->
+{% macro search_bar(id, placeholder="Search...", on_submit_func="") %}
+<div class="input-group">
+  <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-search"></i></span>
+  <input type="text" id="{{ id }}" class="form-control bg-dark border-secondary text-white" placeholder="{{ placeholder }}" onkeyup="if(event.key === 'Enter') { {{ on_submit_func }}(this.value); }">
+</div>
+{% endmacro %}

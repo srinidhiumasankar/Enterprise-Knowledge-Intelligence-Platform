@@ -1,0 +1,7 @@
+<!-- app/templates/components/alert.html -->
+{% macro alert(message, type="info", id="") %}
+<div class="alert alert-{{ type }} border-0 bg-opacity-10 text-{{ type }} d-flex align-items-center gap-2" role="alert" {% if id %}id="{{ id }}"{% endif %}>
+  <i class="bi bi-info-circle-fill"></i>
+  <div>{{ message }}</div>
+</div>
+{% endmacro %}

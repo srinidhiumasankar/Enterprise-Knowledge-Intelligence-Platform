@@ -51,7 +51,8 @@ class ConversationRepository:
         user_id: int,
         page: int = 1,
         page_size: int = 20,
-        include_deleted: bool = False
+        include_deleted: bool = False,
+        workspace_id: Optional[int] = None
     ) -> Tuple[List[Conversation], int]:
         """
         Lists user conversations with paginated counts, excluding archived ones.
@@ -60,6 +61,8 @@ class ConversationRepository:
             Conversation.user_id == user_id,
             Conversation.is_archived.is_(False)
         )
+        if workspace_id is not None:
+            query = query.where(Conversation.workspace_id == workspace_id)
         if not include_deleted:
             query = query.where(Conversation.deleted_at.is_(None))
 
@@ -148,7 +151,7 @@ class ConversationRepository:
             return True
         return False
 
-    def list_pinned(self, user_id: int) -> List[Conversation]:
+    def list_pinned(self, user_id: int, workspace_id: Optional[int] = None) -> List[Conversation]:
         """
         Lists active pinned conversations for a user.
         """
@@ -157,10 +160,13 @@ class ConversationRepository:
             Conversation.is_pinned.is_(True),
             Conversation.deleted_at.is_(None),
             Conversation.is_archived.is_(False)
-        ).order_by(Conversation.updated_at.desc(), Conversation.id.desc())
+        )
+        if workspace_id is not None:
+            query = query.where(Conversation.workspace_id == workspace_id)
+        query = query.order_by(Conversation.updated_at.desc(), Conversation.id.desc())
         return list(self.db.scalars(query).all())
 
-    def list_archived(self, user_id: int) -> List[Conversation]:
+    def list_archived(self, user_id: int, workspace_id: Optional[int] = None) -> List[Conversation]:
         """
         Lists active archived conversations for a user.
         """
@@ -168,7 +174,10 @@ class ConversationRepository:
             Conversation.user_id == user_id,
             Conversation.is_archived.is_(True),
             Conversation.deleted_at.is_(None)
-        ).order_by(Conversation.updated_at.desc(), Conversation.id.desc())
+        )
+        if workspace_id is not None:
+            query = query.where(Conversation.workspace_id == workspace_id)
+        query = query.order_by(Conversation.updated_at.desc(), Conversation.id.desc())
         return list(self.db.scalars(query).all())
 
     def search(
@@ -176,7 +185,8 @@ class ConversationRepository:
         user_id: int,
         keyword: str,
         page: int = 1,
-        page_size: int = 20
+        page_size: int = 20,
+        workspace_id: Optional[int] = None
     ) -> Tuple[List[Conversation], int]:
         """
         Performs case-insensitive partial keyword search over titles and message bodies.
@@ -187,6 +197,9 @@ class ConversationRepository:
             Conversation.user_id == user_id,
             Conversation.deleted_at.is_(None)
         )
+        if workspace_id is not None:
+            base_filter = and_(base_filter, Conversation.workspace_id == workspace_id)
+            
         kw_filter = or_(
             Conversation.title.ilike(f"%{keyword}%"),
             ChatMessage.content.ilike(f"%{keyword}%")

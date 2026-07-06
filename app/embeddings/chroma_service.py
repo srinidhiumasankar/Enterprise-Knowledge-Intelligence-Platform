@@ -22,10 +22,11 @@ class ChromaService:
     _client: Optional[chromadb.PersistentClient] = None
     _collection: Any = None
 
-    def __init__(self) -> None:
+    def __init__(self, collection_name: Optional[str] = None) -> None:
         """
         Initialize the ChromaService instance.
         """
+        self.custom_collection_name = collection_name
         self.initialize()
 
     def initialize(self) -> None:
@@ -51,123 +52,118 @@ class ChromaService:
 
         self.client = ChromaService._client
 
+        # Determine collection name
+        target_name = self.custom_collection_name or config.CHROMA_COLLECTION_NAME
+
+        # If using standard name and cached collection exists, reuse it
+        if not self.custom_collection_name and ChromaService._collection is not None:
+            self.collection = ChromaService._collection
+            return
+
         # 2. Get or create collection with validation
-        if ChromaService._collection is None:
-            try:
-                expected_dimension = settings.EMBEDDING_DIMENSION
-                logger.info(f"Expected embedding dimension: {expected_dimension}")
+        try:
+            expected_dimension = settings.EMBEDDING_DIMENSION
+            logger.info(f"Targeting collection '{target_name}' with expected dimension: {expected_dimension}")
 
-                # Check if collection exists
-                collection_names = [col.name for col in self.client.list_collections()]
-                if config.CHROMA_COLLECTION_NAME in collection_names:
-                    logger.info(f"Loaded collection '{config.CHROMA_COLLECTION_NAME}'. Performing dimension check...")
-                    collection = self.client.get_collection(name=config.CHROMA_COLLECTION_NAME)
-                    
-                    # Try to inspect dimension
-                    existing_dim = None
-                    if collection.metadata and "embedding_dimension" in collection.metadata:
-                        existing_dim = collection.metadata["embedding_dimension"]
-                        logger.info(f"Chroma collection metadata indicates dimension: {existing_dim}")
-                    else:
-                        # Peek at first item to check dimension if metadata is not set
-                        try:
-                            peeked = collection.get(limit=1, include=["embeddings"])
-                            if peeked and peeked.get("embeddings") and len(peeked["embeddings"]) > 0:
-                                existing_dim = len(peeked["embeddings"][0])
-                                logger.info(f"Peeked collection item indicates dimension: {existing_dim}")
-                        except Exception as e:
-                            logger.warning(f"Failed to inspect existing collection vector dimension: {e}")
-
-                    # Re-create collection on dimension mismatch
-                    if existing_dim is None:
-                        logger.warning(
-                            "Unable to determine existing collection dimension. "
-                            "Recreating collection..."
-                        )
-
-                        self.client.delete_collection(name=config.CHROMA_COLLECTION_NAME)
-
-                        ChromaService._collection = self.client.create_collection(
-                            name=config.CHROMA_COLLECTION_NAME,
-                            metadata={
-                                "embedding_dimension": expected_dimension,
-                                "model_name": config.EMBEDDING_MODEL_NAME,
-                            },
-                        )
-
-                        logger.info("Collection recreated successfully.")
-
-                    elif existing_dim != expected_dimension:
-                        logger.warning(
-                            f"Dimension mismatch detected! Existing dimension: {existing_dim}, "
-                            f"Expected dimension: {expected_dimension}. Recreating collection..."
-                        )
-
-                        self.client.delete_collection(name=config.CHROMA_COLLECTION_NAME)
-
-                        ChromaService._collection = self.client.create_collection(
-                            name=config.CHROMA_COLLECTION_NAME,
-                            metadata={
-                                "embedding_dimension": expected_dimension,
-                                "model_name": config.EMBEDDING_MODEL_NAME,
-                            },
-                        )
-
-                        logger.info("Collection recreated successfully with correct dimension.")
-                    else:
-                        ChromaService._collection = collection
-                        # If metadata was missing, update it to standard format
-                        if not collection.metadata or "embedding_dimension" not in collection.metadata:
-                            logger.info("Updating collection metadata with dimension info...")
-                            collection.modify(
-                                metadata={
-                                    "embedding_dimension": expected_dimension,
-                                    "model_name": config.EMBEDDING_MODEL_NAME
-                                }
-                            )
+            # Check if collection exists
+            collection_names = [col.name for col in self.client.list_collections()]
+            if target_name in collection_names:
+                logger.info(f"Loaded collection '{target_name}'. Performing dimension check...")
+                collection = self.client.get_collection(name=target_name)
+                
+                # Try to inspect dimension
+                existing_dim = None
+                if collection.metadata and "embedding_dimension" in collection.metadata:
+                    existing_dim = collection.metadata["embedding_dimension"]
+                    logger.info(f"Chroma collection metadata indicates dimension: {existing_dim}")
                 else:
-                    # Create a new collection
-                    logger.info(f"Creating a new collection '{config.CHROMA_COLLECTION_NAME}' with dimension {expected_dimension}...")
-                    ChromaService._collection = self.client.create_collection(
-                        name=config.CHROMA_COLLECTION_NAME,
+                    try:
+                        peeked = collection.get(limit=1, include=["embeddings"])
+                        if peeked and peeked.get("embeddings") and len(peeked["embeddings"]) > 0:
+                            existing_dim = len(peeked["embeddings"][0])
+                            logger.info(f"Peeked collection item indicates dimension: {existing_dim}")
+                    except Exception as e:
+                        logger.warning(f"Failed to inspect existing collection vector dimension: {e}")
+
+                # Re-create collection on dimension mismatch or missing info
+                if existing_dim is None or existing_dim != expected_dimension:
+                    logger.warning(
+                        f"Dimension mismatch or missing info for '{target_name}'. Recreating collection..."
+                    )
+                    self.client.delete_collection(name=target_name)
+                    collection = self.client.create_collection(
+                        name=target_name,
                         metadata={
                             "embedding_dimension": expected_dimension,
-                            "model_name": config.EMBEDDING_MODEL_NAME
-                        }
+                            "model_name": config.EMBEDDING_MODEL_NAME,
+                        },
                     )
-                    logger.info("Collection created successfully.")
+                    logger.info(f"Collection '{target_name}' recreated successfully.")
+                else:
+                    # Update missing metadata if needed
+                    if not collection.metadata or "embedding_dimension" not in collection.metadata:
+                        collection.modify(
+                            metadata={
+                                "embedding_dimension": expected_dimension,
+                                "model_name": config.EMBEDDING_MODEL_NAME
+                            }
+                        )
+                self.collection = collection
+            else:
+                # Create new collection
+                logger.info(f"Creating new collection '{target_name}' with dimension {expected_dimension}...")
+                self.collection = self.client.create_collection(
+                    name=target_name,
+                    metadata={
+                        "embedding_dimension": expected_dimension,
+                        "model_name": config.EMBEDDING_MODEL_NAME
+                    }
+                )
+                logger.info(f"Collection '{target_name}' created successfully.")
 
-            except Exception as outer_e:
-                logger.warning(f"ChromaDB validation error: {outer_e}. Safely resetting PersistentClient storage...")
+            # Cache the standard collection as singleton
+            if not self.custom_collection_name:
+                ChromaService._collection = self.collection
+
+        except Exception as outer_e:
+            logger.warning(f"ChromaDB validation error: {outer_e}. Safely resetting storage directory...")
+            if not self.custom_collection_name:
                 try:
-                    # Reset class attributes
                     ChromaService._client = None
                     ChromaService._collection = None
-                    
-                    # Wipe database directory
                     if os.path.exists(config.CHROMA_DB_PATH):
                         shutil.rmtree(config.CHROMA_DB_PATH)
                     os.makedirs(config.CHROMA_DB_PATH, exist_ok=True)
-                    
-                    # Recreate persistent client and collection
                     ChromaService._client = chromadb.PersistentClient(
                         path=config.CHROMA_DB_PATH,
                         settings=ChromaSettings(anonymized_telemetry=False)
                     )
                     self.client = ChromaService._client
-                    ChromaService._collection = self.client.create_collection(
+                    self.collection = self.client.create_collection(
                         name=config.CHROMA_COLLECTION_NAME,
                         metadata={
                             "embedding_dimension": settings.EMBEDDING_DIMENSION,
                             "model_name": config.EMBEDDING_MODEL_NAME
                         }
                     )
-                    logger.info("ChromaDB storage successfully reset and fresh collection created.")
+                    ChromaService._collection = self.collection
                 except Exception as inner_e:
                     logger.error(f"Fatal error resetting persistent client storage: {inner_e}")
                     raise RuntimeError(f"ChromaDB storage reset failed: {inner_e}")
-
-        self.collection = ChromaService._collection
+            else:
+                # For custom collection name, just delete and recreate it
+                try:
+                    self.client.delete_collection(name=target_name)
+                    self.collection = self.client.create_collection(
+                        name=target_name,
+                        metadata={
+                            "embedding_dimension": expected_dimension,
+                            "model_name": config.EMBEDDING_MODEL_NAME
+                        }
+                    )
+                except Exception as inner_e:
+                    logger.error(f"Failed to reset custom collection: {inner_e}")
+                    raise RuntimeError(f"ChromaDB custom collection reset failed: {inner_e}")
 
     def add_documents(
         self,

@@ -68,3 +68,54 @@
   color: var(--clr-text) !important;
   background-color: rgba(255, 255, 255, 0.06);
 }
+
+/* --- Table Enhancements --- */
+.table {
+  --bs-table-bg: transparent !important;
+  background-color: transparent !important;
+  color: var(--clr-text) !important;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.table th {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  color: var(--clr-text-muted) !important;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.table td {
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+.table-hover tbody tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  color: #fff !important;
+}
+
+/* --- Global Typography Contrast Enhancements --- */
+.text-muted {
+  color: #a0aec0 !important; /* Highly readable WCAG-compliant gray on dark surface */
+}
+.text-white-50 {
+  color: #cbd5e0 !important; /* Brighter secondary white */
+}
+.small.text-muted, .xsmall.text-muted, .text-secondary {
+  color: #a0aec0 !important;
+}
+.form-control::placeholder {
+  color: #718096 !important; /* Accessible form input placeholder contrast */
+}
+::placeholder {
+  color: #718096 !important;
+}
+.form-label {
+  color: #e2e8f0 !important; /* Clear form labels */
+}

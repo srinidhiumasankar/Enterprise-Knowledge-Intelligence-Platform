@@ -1,0 +1,12 @@
+<!-- app/templates/layouts/public.html -->
+{% extends "base.html" %}
+
+{% block title %}{% block public_title %}{% endblock %}{% endblock %}
+
+{% block extra_head %}
+  {% block public_extra_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+  {% block public_content %}{% endblock %}
+{% endblock %}

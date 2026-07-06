@@ -33,6 +33,50 @@ class RetrievalService:
         self.embedding_service = embedding_service or EmbeddingService()
         self.chroma_service = chroma_service or ChromaService()
 
+    def _trigger_bg_record(
+        self,
+        user_id: int,
+        workspace_id: int,
+        query: str,
+        collection_ids: Optional[List[int]],
+        latency_ms: float,
+        result_count: int
+    ):
+        try:
+            from app.config import settings
+            enable_history = getattr(settings, "ENABLE_SEARCH_HISTORY", True)
+            if enable_history and user_id and workspace_id:
+                import threading
+                from app.database import SessionLocal
+                from app.services.search_history.search_history_service import SearchHistoryService
+
+                filters_json = {
+                    "collection_ids": collection_ids
+                }
+
+                def bg_record():
+                    db_bg = SessionLocal()
+                    try:
+                        sh_service = SearchHistoryService(db_bg)
+                        sh_service.record_search(
+                            user_id=user_id,
+                            workspace_id=workspace_id,
+                            query=query,
+                            filters_json=filters_json,
+                            execution_time_ms=int(latency_ms),
+                            result_count=result_count
+                        )
+                    except Exception as bg_e:
+                        logger.error(f"Failed to record search history in background: {bg_e}")
+                    finally:
+                        db_bg.close()
+
+                thread = threading.Thread(target=bg_record)
+                thread.daemon = True
+                thread.start()
+        except Exception as e:
+            logger.error(f"Failed to trigger search history background recording: {e}")
+
     async def retrieve(
         self,
         user_id: int,
@@ -65,31 +109,32 @@ class RetrievalService:
             document_id = None
             from app.config import settings
             enable_filtering = getattr(settings, "ENABLE_COLLECTION_FILTERING", True)
-            if enable_filtering and (collection_ids is not None or workspace_id is not None):
-                from app.database import SessionLocal
-                from app.services.collection.collection_filter_service import CollectionFilterService
-                from sqlalchemy import select
+            from app.database import SessionLocal
+            from app.services.workspace.workspace_service import WorkspaceService
+            from app.services.collection.collection_filter_service import CollectionFilterService
 
-                db = SessionLocal()
-                try:
-                    if not workspace_id:
-                        from app.models.workspace import Workspace
-                        ws = db.scalars(select(Workspace).where(Workspace.owner_id == user_id)).first()
-                        workspace_id = ws.id if ws else None
+            db = SessionLocal()
+            try:
+                ws_service = WorkspaceService(db)
+                if not workspace_id:
+                    ws = ws_service.get_active_workspace(user_id)
+                    workspace_id = ws.id
+                else:
+                    ws_service.validate_workspace_ownership(user_id, workspace_id)
 
-                    if workspace_id:
-                        filter_service = CollectionFilterService(db)
-                        resolved_doc_ids = filter_service.validate_and_resolve_filters(
-                            user_id=user_id,
-                            workspace_id=workspace_id,
-                            collection_ids=collection_ids
-                        )
-                        if len(resolved_doc_ids) == 1:
-                            document_id = resolved_doc_ids[0]
-                        else:
-                            document_id = {"$in": resolved_doc_ids}
-                finally:
-                    db.close()
+                if workspace_id:
+                    filter_service = CollectionFilterService(db)
+                    resolved_doc_ids = filter_service.validate_and_resolve_filters(
+                        user_id=user_id,
+                        workspace_id=workspace_id,
+                        collection_ids=collection_ids
+                    )
+                    if len(resolved_doc_ids) == 1:
+                        document_id = resolved_doc_ids[0]
+                    else:
+                        document_id = {"$in": resolved_doc_ids}
+            finally:
+                db.close()
 
             # 2. Semantic Search via LangChain Retriever wrapping ChromaDB
             logger.info(f"Searching ChromaDB via LangChain retriever wrapper with owner_id filter={user_id}, document_id={document_id}, limit={fetch_limit}...")
@@ -114,6 +159,8 @@ class RetrievalService:
 
             if not ids:
                 logger.info(f"No semantic search results found for user_id={user_id}")
+                execution_time_ms = (time.time() - start_time) * 1000
+                self._trigger_bg_record(user_id, workspace_id, query, collection_ids, execution_time_ms, 0)
                 return []
 
             # 3. Retrieve chunks from database to obtain database primary key IDs
@@ -188,6 +235,9 @@ class RetrievalService:
                 f"Returned: {len(ranked_results)} unique ranked chunks. "
                 f"Execution time: {execution_time_ms:.2f}ms."
             )
+
+            self._trigger_bg_record(user_id, workspace_id, query, collection_ids, execution_time_ms, len(ranked_results))
+
             return ranked_results
 
         except (KeyError, ValueError, PermissionError) as e:

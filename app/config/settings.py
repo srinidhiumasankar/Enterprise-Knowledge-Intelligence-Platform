@@ -93,6 +93,21 @@ class Settings(BaseSettings):
     ENABLE_COLLECTION_FILTERING: bool = True
     MAX_COLLECTION_FILTERS: int = 20
 
+    # Workspace Settings
+    ENABLE_MULTI_WORKSPACE: bool = True
+    DEFAULT_WORKSPACE_NAME: str = "My Workspace"
+    ENABLE_WORKSPACE_SWITCHING: bool = True
+    CACHE_ACTIVE_WORKSPACE: bool = True
+
+    # Search History Settings
+    ENABLE_SEARCH_HISTORY: bool = True
+    MAX_RECENT_SEARCHES: int = 50
+    ENABLE_SEARCH_ANALYTICS: bool = True
+
+    # Dashboard Settings
+    ENABLE_DASHBOARD: bool = True
+    DASHBOARD_ACTIVITY_LIMIT: int = 20
+
     # Metadata Ranker Settings
     ENABLE_METADATA_RANKER: bool = True
     METADATA_RANKING_WEIGHTS: dict = {

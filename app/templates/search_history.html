@@ -1,0 +1,254 @@
+{% extends "layouts/app.html" %}
+
+{% block app_title %}Search History - Enterprise Knowledge Intelligence Platform{% endblock %}
+
+{% block app_content %}
+<div class="container-fluid py-4 animate-fade-in-up">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 text-white fw-bold">Search History & Analytics</h1>
+      <p class="text-muted mb-0">Monitor RAG query frequency, retrieval latencies, and clear local tracking history logs.</p>
+    </div>
+    <button class="btn btn-danger" id="btnClearHistory"><i class="bi bi-trash3 me-2"></i>Clear All History</button>
+  </div>
+
+  <!-- Search Statistics Overview -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-primary bg-opacity-15 text-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
+          <i class="bi bi-search fs-4"></i>
+        </div>
+        <div>
+          <div class="text-muted text-uppercase small fw-bold mb-1">Total Queries</div>
+          <h4 class="fw-bold text-white mb-0" id="statTotalQueries">0</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-info bg-opacity-15 text-info rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
+          <i class="bi bi-lightning-fill fs-4"></i>
+        </div>
+        <div>
+          <div class="text-muted text-uppercase small fw-bold mb-1">Today's Queries</div>
+          <h4 class="fw-bold text-info mb-0" id="statTodayQueries">0</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-success bg-opacity-15 text-success rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
+          <i class="bi bi-hourglass-split fs-4"></i>
+        </div>
+        <div>
+          <div class="text-muted text-uppercase small fw-bold mb-1">Avg. Latency</div>
+          <h4 class="fw-bold text-success mb-0" id="statAvgLatency">0 ms</h4>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="metric-card d-flex align-items-center gap-3">
+        <div class="metric-icon-wrapper bg-warning bg-opacity-15 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; flex-shrink: 0;">
+          <i class="bi bi-body-text fs-4"></i>
+        </div>
+        <div>
+          <div class="text-muted text-uppercase small fw-bold mb-1">Avg. Length</div>
+          <h4 class="fw-bold text-warning mb-0" id="statAvgLength">0 chars</h4>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Left column: Timeline query list -->
+    <div class="col-lg-8">
+      <div class="card bg-dark border-secondary text-white p-3">
+        <h5 class="fw-bold mb-3 text-white"><i class="bi bi-clock-history me-2 text-primary"></i>Query Audit timeline</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover table-striped align-middle small">
+            <thead>
+              <tr>
+                <th>Search Query</th>
+                <th>Results</th>
+                <th>Latency</th>
+                <th>Timestamp</th>
+                <th style="width: 80px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr>
+                <td colspan="5" class="text-center text-muted">No search history recorded in this workspace.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary">
+          <button class="btn btn-sm btn-outline-secondary text-white" id="btnPrevPage" disabled>Prev</button>
+          <span class="small text-muted" id="pageIndicator">Page 1</span>
+          <button class="btn btn-sm btn-outline-secondary text-white" id="btnNextPage" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: Frequent Queries rank -->
+    <div class="col-lg-4">
+      <div class="card bg-dark border-secondary text-white p-3 mb-4">
+        <h5 class="fw-bold mb-3 text-white"><i class="bi bi-bar-chart-fill me-2 text-warning"></i>Top Searched Queries</h5>
+        <div id="frequentListContainer">
+          <div class="text-center text-muted py-3">Loading frequent queries...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block app_extra_scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    let currentPage = 1;
+    let totalPages = 1;
+    const limit = 15;
+
+    const historyTableEl = document.getElementById("historyTableBody");
+    const frequentContainerEl = document.getElementById("frequentListContainer");
+
+    // Load Aggregated statistics
+    const loadStatistics = async () => {
+      try {
+        const stats = await api.get("/api/search-history/statistics");
+        if (stats) {
+          document.getElementById("statTotalQueries").innerText = stats.total_searches;
+          document.getElementById("statTodayQueries").innerText = stats.today_searches;
+          document.getElementById("statAvgLatency").innerText = stats.average_latency_ms + " ms";
+          document.getElementById("statAvgLength").innerText = stats.average_query_length + " chars";
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    // Load Frequent queries list
+    const loadFrequentQueries = async () => {
+      try {
+        const freq = await api.get("/api/search-history/frequent?limit=10");
+        if (freq) {
+          frequentContainerEl.innerHTML = "";
+          if (freq.length === 0) {
+            frequentContainerEl.innerHTML = `<div class="text-center text-muted py-3">No frequent queries.</div>`;
+          } else {
+            freq.forEach((item, index) => {
+              const div = document.createElement("div");
+              div.className = "d-flex justify-content-between align-items-center mb-2 p-2 bg-dark bg-opacity-25 rounded border border-secondary border-opacity-50";
+              div.innerHTML = `
+                <div class="text-truncate" style="max-width: 200px;">
+                  <span class="badge bg-secondary me-2">${index + 1}</span>
+                  <span class="text-white fw-semibold small" title="${item.query}">${item.query}</span>
+                </div>
+                <span class="badge bg-warning text-dark font-monospace">${item.count} searches</span>
+              `;
+              frequentContainerEl.appendChild(div);
+            });
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    // Load History logs list
+    const loadHistoryLogs = async (page = 1) => {
+      try {
+        const data = await api.get(`/api/search-history?page=${page}&page_size=${limit}`);
+        if (data) {
+          currentPage = data.page;
+          totalPages = data.total_pages;
+
+          historyTableEl.innerHTML = "";
+          if (data.items.length === 0) {
+            historyTableEl.innerHTML = `
+              <tr>
+                <td colspan="5" class="text-center text-muted py-5 px-3">
+                  <i class="bi bi-clock-history fs-1 text-secondary mb-3 d-block"></i>
+                  <h6 class="text-white fw-bold mb-1">No search history yet</h6>
+                  <p class="xsmall text-muted mb-0" style="font-size: 0.8rem;">Queries sent through RAG Retrieval pipelines will be logged here asynchronously.</p>
+                </td>
+              </tr>
+            `;
+          } else {
+            data.items.forEach(item => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                <td class="text-white fw-semibold">${item.query}</td>
+                <td class="text-white">${item.result_count ?? 0}</td>
+                <td class="text-muted small">${item.execution_time_ms ?? 0} ms</td>
+                <td class="text-muted small">${new Date(item.created_at).toLocaleString()}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="${item.id}"><i class="bi bi-trash"></i></button>
+                </td>
+              `;
+              historyTableEl.appendChild(tr);
+            });
+
+            // Wire delete entry buttons
+            document.querySelectorAll(".btn-delete-entry").forEach(btn => {
+              btn.addEventListener("click", async () => {
+                const id = parseInt(btn.dataset.id);
+                try {
+                  const res = await api.delete(`/api/search-history/${id}`);
+                  if (res) {
+                    loadHistoryLogs(currentPage);
+                    loadStatistics();
+                    loadFrequentQueries();
+                  }
+                } catch (err) {
+                  console.error(err);
+                }
+              });
+            });
+          }
+
+          // Handle Pagination indicators
+          document.getElementById("pageIndicator").innerText = `Page ${currentPage} of ${totalPages || 1}`;
+          document.getElementById("btnPrevPage").disabled = currentPage <= 1;
+          document.getElementById("btnNextPage").disabled = currentPage >= totalPages;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    // Clear all history logs
+    document.getElementById("btnClearHistory").addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to clear all search logs permanently in this workspace? This action is irreversible.")) return;
+
+      try {
+        const res = await api.delete("/api/search-history");
+        if (res) {
+          loadHistoryLogs(1);
+          loadStatistics();
+          loadFrequentQueries();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    });
+
+    // Pagination actions
+    document.getElementById("btnPrevPage").addEventListener("click", () => {
+      if (currentPage > 1) loadHistoryLogs(currentPage - 1);
+    });
+    document.getElementById("btnNextPage").addEventListener("click", () => {
+      if (currentPage < totalPages) loadHistoryLogs(currentPage + 1);
+    });
+
+    // Start load
+    loadStatistics();
+    loadFrequentQueries();
+    loadHistoryLogs(1);
+  });
+</script>
+{% endblock %}

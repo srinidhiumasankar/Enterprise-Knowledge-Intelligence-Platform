@@ -36,9 +36,18 @@ async def upload_document(
     """
     logger.info(f"User '{current_user.email}' is uploading file '{file.filename}'")
     try:
+        from app.services.workspace.workspace_service import WorkspaceService
+        ws_service = WorkspaceService(db)
+        active_ws = ws_service.get_active_workspace(current_user.id)
+
         upload_service = UploadService(DocumentRepository(db))
         db_doc = await upload_service.save_upload(file=file, owner_id=current_user.id)
-        logger.info(f"Upload success for file '{file.filename}' (Doc ID: {db_doc.id})")
+        
+        db_doc.workspace_id = active_ws.id
+        db.commit()
+        db.refresh(db_doc)
+
+        logger.info(f"Upload success for file '{file.filename}' (Doc ID: {db_doc.id}, Workspace: {active_ws.id})")
         return UploadResponse(
             message="Upload successful",
             document_id=db_doc.id,
@@ -73,9 +82,16 @@ def list_documents(
     """
     logger.info(f"Listing documents for user '{current_user.email}' (skip: {skip}, limit: {limit})")
     try:
+        from app.services.workspace.workspace_service import WorkspaceService
+        ws_service = WorkspaceService(db)
+        active_ws = ws_service.get_active_workspace(current_user.id)
+
         doc_repo = DocumentRepository(db)
         docs = doc_repo.get_user_documents(owner_id=current_user.id, skip=skip, limit=limit)
-        return DocumentListResponse(documents=[DocumentResponse.model_validate(d) for d in docs])
+        
+        # Scopes list output strictly to current active workspace
+        scoped_docs = [d for d in docs if d.workspace_id == active_ws.id]
+        return DocumentListResponse(documents=[DocumentResponse.model_validate(d) for d in scoped_docs])
     except Exception as e:
         logger.error(f"Unexpected error listing documents for '{current_user.email}': {e}")
         raise HTTPException(

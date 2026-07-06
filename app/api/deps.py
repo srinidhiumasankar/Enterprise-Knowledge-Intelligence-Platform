@@ -137,3 +137,35 @@ def get_collection_filter_service(db: Session = Depends(get_db)) -> Any:
     return CollectionFilterService(db)
 
 
+def get_workspace_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for WorkspaceService.
+    """
+    from app.services.workspace.workspace_service import WorkspaceService
+    return WorkspaceService(db)
+
+
+def get_workspace_context_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for WorkspaceContextService.
+    """
+    from app.services.workspace.workspace_context_service import WorkspaceContextService
+    return WorkspaceContextService(db)
+
+
+def get_search_history_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for SearchHistoryService.
+    """
+    from app.services.search_history.search_history_service import SearchHistoryService
+    return SearchHistoryService(db)
+
+
+def get_dashboard_service(db: Session = Depends(get_db)) -> Any:
+    """
+    Dependency generator for DashboardService.
+    """
+    from app.services.dashboard.dashboard_service import DashboardService
+    return DashboardService(db)
+
+
