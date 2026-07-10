@@ -225,7 +225,7 @@
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error("[EKIP] Failed to load search statistics:", e);
       }
     };
 
@@ -253,7 +253,7 @@
           }
         }
       } catch (e) {
-        console.error(e);
+        console.error("[EKIP] Failed to load frequent queries:", e);
       }
     };
 
@@ -303,7 +303,7 @@
                     loadFrequentQueries();
                   }
                 } catch (err) {
-                  console.error(err);
+                  console.error("[EKIP] Failed to delete search history entry:", err);
                 }
               });
             });
@@ -315,7 +315,7 @@
           document.getElementById("btnNextPage").disabled = currentPage >= totalPages;
         }
       } catch (e) {
-        console.error(e);
+        console.error("[EKIP] Failed to load search history logs:", e);
       }
     };
 
@@ -331,7 +331,7 @@
           loadFrequentQueries();
         }
       } catch (e) {
-        console.error(e);
+        console.error("[EKIP] Failed to clear all search history:", e);
       }
     });
 

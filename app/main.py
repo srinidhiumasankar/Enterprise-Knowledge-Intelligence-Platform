@@ -1,16 +1,17 @@
 """
 app/main.py
 -----------
-FastAPI application entry point.
+FastAPI application entry point for the Enterprise Knowledge Intelligence Platform.
 
-Phase 2: Initial Web Application
+Placement Edition v1.0
 
 Configures:
     - Static file serving  (/static → app/static)
     - Jinja2 template rendering  (app/templates)
-    - Root route  GET /  → renders templates/index.html
+    - API routers for auth, upload, search, conversations, retrieval, dashboard
+    - Database auto-migration on startup
+    - ChromaDB stale vector cleanup on startup
 """
-
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,8 +23,8 @@ from fastapi.templating import Jinja2Templates
 
 app = FastAPI(
     title="Enterprise Knowledge Intelligence Platform",
-    description="Production-ready AI-powered RAG Platform",
-    version="0.2.0",
+    description="Production-ready AI-powered Retrieval-Augmented Generation (RAG) Platform — Placement Edition v1.0",
+    version="1.0.0",
 )
 
 # ---------------------------------------------------------------------------

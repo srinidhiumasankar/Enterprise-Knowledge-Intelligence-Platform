@@ -590,8 +590,6 @@
        Timestamp Formatter Utilities
        ============================================================ */
     function formatTime(isoString) {
-      // Task 9 - Temporary Debug Logging
-      console.debug("Timestamp:", isoString, typeof isoString);
       if (isoString === null || isoString === undefined || isoString === '') return '';
       try {
         const date = window.parseUTCDate(isoString);
@@ -604,8 +602,6 @@
     }
 
     function formatUpdatedTimestamp(isoString) {
-      // Task 9 - Temporary Debug Logging
-      console.debug("Timestamp:", isoString, typeof isoString);
       if (isoString === null || isoString === undefined || isoString === '') return '';
       try {
         const date = window.parseUTCDate(isoString);
@@ -912,93 +908,6 @@
     };
 
     /* ============================================================
-       Mock bot responses database sync
-       ============================================================ */
-    // LEGACY: Retained only as a legacy offline simulator after Phase 10.2. Do not delete.
-    const getSimulatedBotResponse = async (query) => {
-      const q = query.toLowerCase().trim();
-
-      let docsList = [];
-      try {
-        const res = await api.get("/api/upload");
-        if (res && res.documents) {
-          docsList = res.documents;
-        }
-      } catch (e) {
-        console.error("Failed to fetch active workspace documents: ", e);
-      }
-
-      if (q.includes("summarize uploaded documents") || q.includes("summarize documents")) {
-        if (docsList.length === 0) {
-          return `There are no uploaded documents.`;
-        }
-        let summary = `Here is a summary of the indexed documents in your active workspace:\n\n`;
-        docsList.forEach((doc, index) => {
-          summary += `${index + 1}. **${doc.filename}** (Status: ${doc.status})\n`;
-          summary += `   - Extension: ${doc.file_extension.toUpperCase()}, Size: ${(doc.file_size / 1024).toFixed(1)} KB\n`;
-          summary += `   - Scanned and indexed inside your active workspace vector database.\n\n`;
-        });
-        summary += `All files listed above are indexed and available for context retrievals.`;
-        return summary;
-      }
-
-      if (q.includes("compare documents")) {
-        if (docsList.length === 0) {
-          return `There are no documents in your active workspace to compare. Please upload some documents first.`;
-        }
-        if (docsList.length === 1) {
-          return `You only have one document (**${docsList[0].filename}**) in your active workspace. Upload more documents to perform comparisons.`;
-        }
-        let comparison = `Comparing active workspace documents:\n\n`;
-        docsList.forEach(doc => {
-          comparison += `* **${doc.filename}**: Size ${(doc.file_size / 1024).toFixed(1)} KB, status: ${doc.status}.\n`;
-        });
-        comparison += `\nYou can run cross-document searches to synthesize details across these files.`;
-        return comparison;
-      }
-
-      if (q.includes("what documents are available") || q.includes("list available documents") || q.includes("list documents")) {
-        if (docsList.length === 0) {
-          return `There are no documents stored inside your active workspace.`;
-        }
-        let listStr = `The following indexed documents are stored inside your active workspace context:\n\n`;
-        docsList.forEach(doc => {
-          listStr += `* **${doc.filename}**\n`;
-          listStr += `  - Size: ${(doc.file_size / 1024).toFixed(1)} KB\n`;
-          listStr += `  - Indexed: ${doc.status === 'indexed' ? 'Yes' : 'No'}\n\n`;
-        });
-        return listStr;
-      }
-
-      if (q.includes("explain machine learning")) {
-        return `**Machine Learning (ML)** is a key subfield of Artificial Intelligence (AI) that provides computers with the ability to learn directly from datasets and experience without explicit code commands.
-
-### Core Paradigms of ML
-
-* **Supervised Learning**: Training a model using labeled targets (e.g. predicting a continuous value like real estate pricing or categorizing emails into spam/inbox folders).
-* **Unsupervised Learning**: Discovering hidden dimensions or structures in datasets without target labels (e.g. customer segmentations).
-* **Reinforcement Learning**: Guiding agents using punishment/reward loops inside simulated environments (e.g. game agents).
-
-For enterprise systems like EKIP, ML models (specifically Large Language Models) retrieve knowledge from your indexed documents to generate verified responses using Retrieval-Augmented Generation (RAG).`;
-      }
-
-      if (q.includes("find fastapi information")) {
-        return `Based on search queries in the active workspace, **FastAPI** is implemented as the core web microservice framework for EKIP. 
-
-Key attributes loaded from document context:
-- **Directory Router:** Mounted endpoints reside under \`app/api/\` (e.g. auth, workspace context, document upload, conversation routers).
-- **Startup Events:** Server routes configure automatic JWT extraction handlers and database session attachments.
-- **API Documentation:** Interactive docs are served at \`/docs\` dynamically.`;
-      }
-
-      const activeDocNames = docsList.map(d => d.filename).join(', ') || 'none';
-      return `I scanned your active workspace context and located relevant context chunks from the following documents: **${activeDocNames}**. 
-
-> [!NOTE]
-> **Phase 10.1 UI Simulation:** Backend LLM services are currently mocked. In Phase 10.2, this workspace context will be sent to the Gemini 2.5/3.5 models along with retrieved semantic vector chunks to perform live Retrieval-Augmented Generation (RAG).`;
-    };
-
-    /* ============================================================
        Messaging Forms & Submit Interactions
        ============================================================ */
     const handleSendMessage = async (customText = null) => {
@@ -1138,10 +1047,6 @@ Key attributes loaded from document context:
 
         const token = (typeof auth !== "undefined" && typeof auth.getToken === "function") ? auth.getToken() : (localStorage.getItem("access_token") || "");
         const authHeader = `Bearer ${token}`;
-
-        // Step 5: Temporarily log token info
-        console.log("JWT:", token);
-        console.log("Authorization:", authHeader);
 
         const response = await fetch(`/api/conversations/${activeConversationId}/stream`, {
           method: "POST",

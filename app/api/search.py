@@ -46,8 +46,6 @@ async def search_chunks(
     Generate query embedding, perform vector similarity search, filter by user ownership,
     and return ranked results with LLM generated answer and structured citations.
     """
-    from fastapi import BackgroundTasks
-    from sqlalchemy.orm import Session
     from app.services.workspace.workspace_service import WorkspaceService
     from app.utils.activity_logger import record_rag_search_history
 

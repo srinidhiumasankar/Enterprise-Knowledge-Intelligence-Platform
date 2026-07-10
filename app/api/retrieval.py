@@ -3,6 +3,7 @@
 # Router implementing search API endpoints for collection-scoped semantic retrieval.
 
 import logging
+import time
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
@@ -38,9 +39,6 @@ async def search_collection_chunks(
     """
     Perform semantic vector query filtered to a specific set of document collections or workspace boundary.
     """
-    import time
-    from fastapi import BackgroundTasks
-    from sqlalchemy.orm import Session
     from app.services.workspace.workspace_service import WorkspaceService
     from app.utils.activity_logger import record_rag_search_history
 

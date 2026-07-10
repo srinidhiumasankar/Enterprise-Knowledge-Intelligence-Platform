@@ -214,9 +214,9 @@
                     loadDocuments();
                   }
                 } catch (err) {
-                  console.error(err);
+                  console.error("[EKIP] Document processing failed:", err);
                   if (typeof window.showToast === 'function') {
-                    window.showToast("Processing failed. Please check file format.", "error");
+                    window.showToast("Processing failed. Please check file format.", "danger");
                   }
                   loadDocuments();
                 }
@@ -235,14 +235,14 @@
                     loadDocuments();
                   }
                 } catch (err) {
-                  console.error(err);
+                  console.error("[EKIP] Document delete failed:", err);
                 }
               });
             });
           }
         }
       } catch (err) {
-        console.error(err);
+        console.error("[EKIP] Failed to load documents list:", err);
       }
     };
 
@@ -281,13 +281,18 @@
           }
           loadDocuments();
         } else {
-          const errData = await res.json();
-          alert(errData.detail || "Upload failed");
+          const errData = await res.json().catch(() => ({}));
+          if (typeof window.showToast === 'function') {
+            window.showToast(errData.detail || "Upload failed. Please check file type and size.", "danger");
+          }
         }
       } catch (err) {
         spinnerEl.classList.add("d-none");
         document.getElementById("btnUploadSubmit").disabled = false;
-        console.error(err);
+        console.error("[EKIP] Upload request failed:", err);
+        if (typeof window.showToast === 'function') {
+          window.showToast("Upload failed. Please try again.", "danger");
+        }
       }
     });
 

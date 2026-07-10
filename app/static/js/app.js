@@ -69,31 +69,6 @@
   cards.forEach((card) => observer.observe(card));
 })();
 
-/* ============================================================
-   CTA Buttons: inform the user these features are coming soon.
-   No navigation or business logic — Phase 2 is UI only.
-   ============================================================ */
-(function initCTAButtons() {
-  const btnUpload = document.getElementById("btnUpload");
-  const btnChat   = document.getElementById("btnChat");
-
-  const notify = (message) => {
-    console.info("[EKIP]", message);
-  };
-
-  if (btnUpload) {
-    btnUpload.addEventListener("click", () => {
-      notify("Document upload will be available in a future phase.");
-    });
-  }
-
-  if (btnChat) {
-    btnChat.addEventListener("click", () => {
-      notify("AI Chat interface will be available in a future phase.");
-    });
-  }
-})();
-
 
 /* ============================================================
    Timezone & Datetime Utilities
