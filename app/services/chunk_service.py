@@ -199,6 +199,9 @@ class ChunkService:
         self.doc_repository.db.add(doc)
         self.doc_repository.db.commit()
 
+        from app.utils.activity_logger import log_activity
+        log_activity(self.doc_repository.db, owner_id, doc.workspace_id, "indexing_completed", f"Indexing completed for document: {doc.filename}")
+
         avg_size = int(total_chars / len(chunks)) if chunks else 0
 
         return {

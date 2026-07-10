@@ -146,16 +146,16 @@ class TestDashboard(unittest.TestCase):
             self.service.build_dashboard_summary(self.ws1.id, self.user2.id)
 
     def test_activity_limits(self):
-        # Record 25 search queries
+        # Record 25 activity logs
+        from app.models.activity_log import ActivityLog
         for i in range(25):
-            search = SearchHistory(
+            log = ActivityLog(
                 user_id=self.user1.id,
                 workspace_id=self.ws1.id,
-                query=f"query {i}",
-                execution_time_ms=50,
-                result_count=1
+                event_type="search_executed",
+                description=f"query {i}"
             )
-            self.db.add(search)
+            self.db.add(log)
         self.db.commit()
 
         # Build dashboard summary

@@ -95,6 +95,14 @@
 
     <!-- Right column: Frequent Queries rank -->
     <div class="col-lg-4">
+      <!-- Daily Query Trend -->
+      <div class="card bg-dark border-secondary text-white p-3 mb-4">
+        <h5 class="fw-bold mb-3 text-white"><i class="bi bi-graph-up me-2 text-info"></i>Daily Query Trend</h5>
+        <div style="position: relative; height: 180px; width: 100%;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
       <div class="card bg-dark border-secondary text-white p-3 mb-4">
         <h5 class="fw-bold mb-3 text-white"><i class="bi bi-bar-chart-fill me-2 text-warning"></i>Top Searched Queries</h5>
         <div id="frequentListContainer">
@@ -109,9 +117,47 @@
 {% block app_extra_scripts %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    // Fallback in case browser caching serves stale app.js without parseUTCDate
+    window.parseUTCDate = function (isoString) {
+      if (isoString === null || isoString === undefined || isoString === "") {
+        return new Date();
+      }
+      if (isoString instanceof Date) {
+        return isoString;
+      }
+      if (typeof isoString === "number") {
+        const d = new Date(isoString);
+        return isNaN(d.getTime()) ? new Date() : d;
+      }
+      if (typeof isoString !== "string") {
+        return new Date();
+      }
+      let dateStr = isoString;
+      if (!dateStr.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(dateStr)) {
+        dateStr = dateStr + "Z";
+      }
+      const parsed = new Date(dateStr);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    };
+
+    window.normalizeTimestamp = function (value) {
+      if (value instanceof Date) {
+        return value;
+      }
+      if (typeof value === "number") {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? new Date() : d;
+      }
+      if (typeof value === "string") {
+        return window.parseUTCDate(value);
+      }
+      return new Date();
+    };
+
     let currentPage = 1;
     let totalPages = 1;
     const limit = 15;
+    let trendChart = null;
 
     const historyTableEl = document.getElementById("historyTableBody");
     const frequentContainerEl = document.getElementById("frequentListContainer");
@@ -125,6 +171,58 @@
           document.getElementById("statTodayQueries").innerText = stats.today_searches;
           document.getElementById("statAvgLatency").innerText = stats.average_latency_ms + " ms";
           document.getElementById("statAvgLength").innerText = stats.average_query_length + " chars";
+
+          if (stats.daily_query_trend) {
+            const labels = Object.keys(stats.daily_query_trend);
+            const values = Object.values(stats.daily_query_trend);
+            
+            const ctx = document.getElementById("trendChart").getContext("2d");
+            if (trendChart) {
+              trendChart.destroy();
+            }
+            trendChart = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels.map(label => {
+                  const parts = label.split('-');
+                  return `${parts[1]}/${parts[2]}`; // MM/DD format
+                }),
+                datasets: [{
+                  label: 'Queries',
+                  data: values,
+                  borderColor: 'rgba(59, 130, 246, 1)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.12)',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.3,
+                  pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                  pointRadius: 3
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: false }
+                },
+                scales: {
+                  x: {
+                    grid: { display: false },
+                    ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } }
+                  },
+                  y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                    ticks: {
+                      color: 'rgba(255,255,255,0.5)',
+                      font: { size: 9 },
+                      stepSize: 1,
+                      beginAtZero: true
+                    }
+                  }
+                }
+              }
+            });
+          }
         }
       } catch (e) {
         console.error(e);
@@ -185,7 +283,7 @@
                 <td class="text-white fw-semibold">${item.query}</td>
                 <td class="text-white">${item.result_count ?? 0}</td>
                 <td class="text-muted small">${item.execution_time_ms ?? 0} ms</td>
-                <td class="text-muted small">${new Date(item.created_at).toLocaleString()}</td>
+                <td class="text-muted small">${window.parseUTCDate(item.created_at).toLocaleString()}</td>
                 <td>
                   <button class="btn btn-sm btn-outline-danger btn-delete-entry" data-id="${item.id}"><i class="bi bi-trash"></i></button>
                 </td>

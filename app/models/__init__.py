@@ -12,3 +12,4 @@ from app.models.collection import Collection
 from app.models.document_collection import DocumentCollection
 from app.models.search_history import SearchHistory
 from app.models.user_preference import UserPreference
+from app.models.activity_log import ActivityLog

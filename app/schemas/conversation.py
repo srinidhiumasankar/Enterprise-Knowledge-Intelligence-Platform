@@ -4,7 +4,7 @@
 
 from datetime import datetime
 from typing import List, Optional, Any, Dict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatMessageCreate(BaseModel):
@@ -107,7 +107,15 @@ class ConversationRenameRequest(BaseModel):
     """
     Payload schema to change conversation title.
     """
-    title: str = Field(..., min_length=1, max_length=255)
+    title: str = Field(..., max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, v: str) -> str:
+        trimmed = v.strip()
+        if not trimmed:
+            raise ValueError("Title cannot be empty or whitespace only")
+        return trimmed
 
 
 class ConversationPinRequest(BaseModel):

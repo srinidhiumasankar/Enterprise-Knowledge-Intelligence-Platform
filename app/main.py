@@ -12,7 +12,7 @@ Configures:
 """
 
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -53,6 +53,19 @@ app.include_router(workspace_context_router)
 app.include_router(workspace_router)
 app.include_router(search_history_router)
 app.include_router(dashboard_router)
+
+@app.on_event("startup")
+def startup_event():
+    from app.database.connection import engine
+    from app.database.base import Base
+    import app.models  # ensure models are registered
+    Base.metadata.create_all(bind=engine)
+    try:
+        from app.utils.chroma_cleaner import cleanup_stale_vectors
+        cleanup_stale_vectors()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Startup ChromaDB cleanup failed: {e}")
 
 # ---------------------------------------------------------------------------
 # Static files — served at /static
@@ -142,16 +155,13 @@ async def conversations_page(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/collections", response_class=HTMLResponse)
-async def collections_page(request: Request) -> HTMLResponse:
+@app.get("/collections")
+async def collections_redirect() -> RedirectResponse:
     """
-    Render the Collections UI page.
+    Collections have been removed from the Placement Edition UI.
+    Redirect any direct navigation to the dashboard.
     """
-    return templates.TemplateResponse(
-        request=request,
-        name="collections.html",
-        context={"title": "Collections - Enterprise Knowledge Intelligence Platform"},
-    )
+    return RedirectResponse(url="/dashboard", status_code=301)
 
 
 @app.get("/documents", response_class=HTMLResponse)
@@ -166,16 +176,12 @@ async def documents_page(request: Request) -> HTMLResponse:
     )
 
 
-@app.get("/workspaces", response_class=HTMLResponse)
-async def workspaces_page(request: Request) -> HTMLResponse:
+@app.get("/workspaces")
+async def workspaces_page() -> RedirectResponse:
     """
-    Render the Workspaces UI page.
+    Redirect the workspaces UI page to the dashboard.
     """
-    return templates.TemplateResponse(
-        request=request,
-        name="workspaces.html",
-        context={"title": "Workspaces - Enterprise Knowledge Intelligence Platform"},
-    )
+    return RedirectResponse(url="/dashboard", status_code=307)
 
 
 @app.get("/search-history", response_class=HTMLResponse)

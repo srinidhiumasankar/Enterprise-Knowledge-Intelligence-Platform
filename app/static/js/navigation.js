@@ -84,50 +84,6 @@
       }
     }
 
-    // --- 4. Populate Navbar Workspace Selector Dropdown ---
-    async function populateWorkspaceSelector() {
-      const wsBtn = document.getElementById("activeWorkspaceName");
-      const wsDropdownList = document.getElementById("wsSelectorDropdownList");
-      if (!wsBtn || !wsDropdownList) return;
 
-      try {
-        const activeWs = await api.get("/api/workspaces/current");
-        if (activeWs) {
-          wsBtn.textContent = activeWs.name;
-        }
-
-        const allWs = await api.get("/api/workspaces");
-        if (allWs && allWs.items) {
-          const header = wsDropdownList.querySelector(".dropdown-header");
-          wsDropdownList.innerHTML = "";
-          if (header) wsDropdownList.appendChild(header);
-
-          allWs.items.forEach(ws => {
-            const li = document.createElement("li");
-            const activeClass = ws.id === activeWs.id ? "active fw-bold text-primary" : "text-white-50";
-            li.innerHTML = `
-              <a class="dropdown-item d-flex align-items-center gap-2 rounded py-2 ${activeClass}" href="#">
-                <i class="bi bi-briefcase"></i> ${ws.name}
-              </a>
-            `;
-            li.querySelector("a").addEventListener("click", async (e) => {
-              e.preventDefault();
-              if (ws.id === activeWs.id) return;
-              try {
-                await api.post(`/api/workspaces/${ws.id}/switch`);
-                window.location.reload();
-              } catch (err) {
-                console.error("Failed to switch workspace: ", err);
-              }
-            });
-            wsDropdownList.appendChild(li);
-          });
-        }
-      } catch (err) {
-        console.error("Failed to populate workspace selector:", err);
-      }
-    }
-
-    await populateWorkspaceSelector();
   });
 })();

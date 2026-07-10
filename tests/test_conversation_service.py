@@ -40,8 +40,8 @@ class TestConversationService(unittest.TestCase):
         self.db.commit()
 
         # Workspace setups
-        self.ws1 = Workspace(owner_id=self.user1.id, name="WS One")
-        self.ws2 = Workspace(owner_id=self.user2.id, name="WS Two")
+        self.ws1 = Workspace(owner_id=self.user1.id, name="WS One", is_default=True)
+        self.ws2 = Workspace(owner_id=self.user2.id, name="WS Two", is_default=False)
         self.db.add(self.ws1)
         self.db.add(self.ws2)
         self.db.commit()

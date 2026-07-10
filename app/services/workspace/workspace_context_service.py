@@ -31,8 +31,16 @@ class WorkspaceContextService:
         """
         cached = _active_workspace_context.get()
         if cached is not None:
-            logger.info("Retrieved active workspace from request context cache.")
-            return cached
+            try:
+                from sqlalchemy import inspect
+                state = inspect(cached)
+                if state.detached:
+                    _active_workspace_context.set(None)
+                else:
+                    logger.info("Retrieved active workspace from request context cache.")
+                    return cached
+            except Exception:
+                _active_workspace_context.set(None)
 
         # Check UserPreference default_workspace
         pref = self.db.scalar(select(UserPreference).where(UserPreference.user_id == user_id))

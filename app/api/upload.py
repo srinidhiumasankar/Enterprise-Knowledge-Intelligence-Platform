@@ -47,6 +47,9 @@ async def upload_document(
         db.commit()
         db.refresh(db_doc)
 
+        from app.utils.activity_logger import log_activity
+        log_activity(db, current_user.id, active_ws.id, "document_upload", f"Uploaded document: {db_doc.filename}")
+
         logger.info(f"Upload success for file '{file.filename}' (Doc ID: {db_doc.id}, Workspace: {active_ws.id})")
         return UploadResponse(
             message="Upload successful",
@@ -87,11 +90,9 @@ def list_documents(
         active_ws = ws_service.get_active_workspace(current_user.id)
 
         doc_repo = DocumentRepository(db)
-        docs = doc_repo.get_user_documents(owner_id=current_user.id, skip=skip, limit=limit)
+        docs = doc_repo.get_user_documents(owner_id=current_user.id, workspace_id=active_ws.id, skip=skip, limit=limit)
         
-        # Scopes list output strictly to current active workspace
-        scoped_docs = [d for d in docs if d.workspace_id == active_ws.id]
-        return DocumentListResponse(documents=[DocumentResponse.model_validate(d) for d in scoped_docs])
+        return DocumentListResponse(documents=[DocumentResponse.model_validate(d) for d in docs])
     except Exception as e:
         logger.error(f"Unexpected error listing documents for '{current_user.email}': {e}")
         raise HTTPException(
@@ -147,7 +148,16 @@ def delete_document(
     logger.info(f"User '{current_user.email}' requested deletion of document ID '{document_id}'")
     try:
         upload_service = UploadService(DocumentRepository(db))
-        upload_service.delete_document(document_id=document_id, owner_id=current_user.id)
+        doc = upload_service.get_document_metadata(document_id=document_id, owner_id=current_user.id)
+        filename = doc.filename if doc else f"ID {document_id}"
+        workspace_id = doc.workspace_id if doc else None
+        
+        success = upload_service.delete_document(document_id=document_id, owner_id=current_user.id)
+        
+        if success and workspace_id:
+            from app.utils.activity_logger import log_activity
+            log_activity(db, current_user.id, workspace_id, "document_deleted", f"Deleted document: {filename}")
+            
         return {"message": "Document deleted successfully"}
     except HTTPException as he:
         raise he

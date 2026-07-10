@@ -175,6 +175,31 @@ class SearchHistoryRepository:
         top_res = self.db.execute(top_query).all()
         top_queries = [{"query": row[0], "count": row[1]} for row in top_res]
 
+        # Daily Query Trend (last 7 days)
+        trend_query = select(
+            func.date(SearchHistory.created_at).label("day"),
+            func.count(SearchHistory.id).label("count")
+        ).where(
+            *base_where,
+            SearchHistory.created_at >= weekly_start
+        ).group_by(
+            func.date(SearchHistory.created_at)
+        ).order_by(
+            "day"
+        )
+        trend_res = self.db.execute(trend_query).all()
+        
+        daily_trend = {}
+        for i in range(7):
+            d = (now - timedelta(days=i)).strftime("%Y-%m-%d")
+            daily_trend[d] = 0
+            
+        for row in trend_res:
+            if row.day:
+                daily_trend[row.day] = row.count
+                
+        daily_trend = dict(sorted(daily_trend.items()))
+
         return {
             "total_searches": total,
             "today_searches": today,
@@ -184,5 +209,6 @@ class SearchHistoryRepository:
             "average_latency_ms": round(avg_latency, 2),
             "most_frequent_query": most_frequent,
             "last_search_time": last_search_time,
-            "top_queries": top_queries
+            "top_queries": top_queries,
+            "daily_query_trend": daily_trend
         }

@@ -71,6 +71,7 @@ class SearchStatisticsResponse(BaseModel):
     most_frequent_query: Optional[str] = None
     last_search_time: Optional[datetime] = None
     top_queries: List[FrequentSearchResponse] = []
+    daily_query_trend: Dict[str, int] = Field(default_factory=dict)
 
 
 class DeleteHistoryResponse(BaseModel):

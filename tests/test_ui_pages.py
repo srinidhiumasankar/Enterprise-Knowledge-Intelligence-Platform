@@ -24,7 +24,7 @@ class TestUIPages(unittest.TestCase):
         res = self.client.get("/dashboard")
         self.assertEqual(res.status_code, 200)
         self.assertIn("text/html", res.headers["content-type"])
-        self.assertIn("Workspace Dashboard", res.text)
+        self.assertIn("Dashboard", res.text)
 
     def test_conversations_page_resolves(self):
         res = self.client.get("/conversations")
@@ -44,11 +44,10 @@ class TestUIPages(unittest.TestCase):
         self.assertIn("text/html", res.headers["content-type"])
         self.assertIn("Document Management", res.text)
 
-    def test_workspaces_page_resolves(self):
-        res = self.client.get("/workspaces")
-        self.assertEqual(res.status_code, 200)
-        self.assertIn("text/html", res.headers["content-type"])
-        self.assertIn("Workspaces", res.text)
+    def test_workspaces_page_redirects(self):
+        res = self.client.get("/workspaces", follow_redirects=False)
+        self.assertEqual(res.status_code, 307)
+        self.assertEqual(res.headers["location"], "/dashboard")
 
     def test_search_history_page_resolves(self):
         res = self.client.get("/search-history")

@@ -85,6 +85,7 @@ class RetrievalService:
         threshold: Optional[float] = None,
         collection_ids: Optional[List[int]] = None,
         workspace_id: Optional[int] = None,
+        document_ids: Optional[List[int]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Execute semantic search and return a ranked list of text chunks.
@@ -95,7 +96,7 @@ class RetrievalService:
             raise ValueError("Search query cannot be empty or whitespace-only.")
 
         start_time = time.time()
-        logger.info(f"Initiating semantic search for user_id={user_id}, query='{query}', top_k={top_k}, collection_ids={collection_ids}, workspace_id={workspace_id}")
+        logger.info(f"Initiating semantic search for user_id={user_id}, query='{query}', top_k={top_k}, collection_ids={collection_ids}, workspace_id={workspace_id}, document_ids={document_ids}")
 
         if threshold is None:
             from app.embeddings import config
@@ -123,13 +124,18 @@ class RetrievalService:
                     ws_service.validate_workspace_ownership(user_id, workspace_id)
 
                 if workspace_id:
-                    filter_service = CollectionFilterService(db)
-                    resolved_doc_ids = filter_service.validate_and_resolve_filters(
-                        user_id=user_id,
-                        workspace_id=workspace_id,
-                        collection_ids=collection_ids
-                    )
-                    if len(resolved_doc_ids) == 1:
+                    if document_ids is not None:
+                        resolved_doc_ids = document_ids
+                    else:
+                        filter_service = CollectionFilterService(db)
+                        resolved_doc_ids = filter_service.validate_and_resolve_filters(
+                            user_id=user_id,
+                            workspace_id=workspace_id,
+                            collection_ids=collection_ids
+                        )
+                    if not resolved_doc_ids:
+                        document_id = -1
+                    elif len(resolved_doc_ids) == 1:
                         document_id = resolved_doc_ids[0]
                     else:
                         document_id = {"$in": resolved_doc_ids}
@@ -236,7 +242,7 @@ class RetrievalService:
                 f"Execution time: {execution_time_ms:.2f}ms."
             )
 
-            self._trigger_bg_record(user_id, workspace_id, query, collection_ids, execution_time_ms, len(ranked_results))
+            # self._trigger_bg_record(user_id, workspace_id, query, collection_ids, execution_time_ms, len(ranked_results))
 
             return ranked_results
 

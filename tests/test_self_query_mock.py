@@ -119,8 +119,10 @@ class TestChromaSelfQueryRetriever(unittest.TestCase):
     @patch("app.services.langchain.parent_retriever.ParentRetriever")
     @patch("app.services.langchain.compression.CompressionRetriever")
     @patch("app.services.langchain.multi_query.get_multi_query_retriever")
+    @patch("app.services.langchain.ensemble.EnsembleRetriever")
     def test_retriever_pipeline_execution(
         self,
+        mock_ensemble_retriever,
         mock_get_multi_query_retriever,
         mock_compression_retriever,
         mock_parent_retriever,
@@ -154,8 +156,11 @@ class TestChromaSelfQueryRetriever(unittest.TestCase):
         mock_mq = MagicMock()
         mock_get_multi_query_retriever.return_value = mock_mq
         
+        mock_ensemble_instance = MagicMock()
+        mock_ensemble_retriever.return_value = mock_ensemble_instance
+        
         expected_docs = [Document(page_content="Mock doc 1", metadata={"year": 2024})]
-        mock_mq.invoke.return_value = expected_docs
+        mock_ensemble_instance.invoke.return_value = expected_docs
 
         # 2. Instantiate and run ChromaSelfQueryRetriever
         retriever = ChromaSelfQueryRetriever(
@@ -170,7 +175,7 @@ class TestChromaSelfQueryRetriever(unittest.TestCase):
         # 3. Assertions
         mock_chain.invoke.assert_called_once_with({"query": "Finance reports after 2022"})
         mock_get_hybrid_retriever.assert_called_once()
-        mock_mq.invoke.assert_called_once_with("Finance reports")
+        mock_ensemble_instance.invoke.assert_called_once_with("Finance reports")
         
         self.assertEqual(results, expected_docs)
         self.assertEqual(mock_hybrid.where_override, {

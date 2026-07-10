@@ -2,7 +2,7 @@
 # ------------------------------------
 # Data access layer for the Document model.
 
-from typing import Sequence
+from typing import Optional, Sequence
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -55,16 +55,16 @@ class DocumentRepository:
         return self.db.get(Document, document_id)
 
     def get_user_documents(
-        self, owner_id: int, skip: int = 0, limit: int = 100
+        self, owner_id: int, workspace_id: Optional[int] = None, skip: int = 0, limit: int = 100
     ) -> Sequence[Document]:
         """
-        Retrieve all documents belonging to a specific user (with pagination).
+        Retrieve all documents belonging to a specific user and workspace (with pagination).
         """
+        stmt = select(Document).where(Document.owner_id == owner_id)
+        if workspace_id is not None:
+            stmt = stmt.where(Document.workspace_id == workspace_id)
         return self.db.scalars(
-            select(Document)
-            .where(Document.owner_id == owner_id)
-            .offset(skip)
-            .limit(limit)
+            stmt.offset(skip).limit(limit)
         ).all()
 
     def delete_document(self, db_document: Document) -> None:

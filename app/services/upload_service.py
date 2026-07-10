@@ -142,7 +142,7 @@ class UploadService:
             )
         return doc
 
-    def delete_document(self, document_id: int, owner_id: int) -> None:
+    def delete_document(self, document_id: int, owner_id: int) -> bool:
         """
         Delete database record and associated physical file from disk.
         """
@@ -171,6 +171,7 @@ class UploadService:
         try:
             self.repository.delete_document(doc)
             logger.info(f"Document metadata record ID '{document_id}' removed from DB")
+            return True
         except Exception as e:
             logger.error(f"Database error deleting document record '{document_id}': {e}")
             raise HTTPException(

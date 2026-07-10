@@ -128,7 +128,7 @@ class TestCollectionService(unittest.TestCase):
         for i in range(5):
             self.service.create_collection(self.user1.id, f"Col {i}", None, self.ws1.id)
 
-        items, total = self.service.list_collections(self.user1.id, page=1, page_size=3)
+        items, total = self.service.list_collections(self.user1.id, page=1, page_size=3, workspace_id=self.ws1.id)
         self.assertEqual(len(items), 3)
         self.assertEqual(total, 5)
 

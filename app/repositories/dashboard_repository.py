@@ -43,7 +43,7 @@ class DashboardRepository:
 
         # Calculate last activity timestamp as the max of created_at/updated_at across tables
         last_doc = self.db.scalar(select(func.max(Document.created_at)).where(Document.workspace_id == workspace_id))
-        last_conv = self.db.scalar(select(func.max(Conversation.updated_at)).where(Conversation.workspace_id == workspace_id))
+        last_conv = self.db.scalar(select(func.max(Conversation.updated_at)).where(Conversation.workspace_id == workspace_id, Conversation.deleted_at.is_(None)))
         last_search = self.db.scalar(select(func.max(SearchHistory.created_at)).where(SearchHistory.workspace_id == workspace_id))
 
         dates = [d for d in [last_doc, last_conv, last_search] if d is not None]
@@ -60,14 +60,14 @@ class DashboardRepository:
         """
         Aggregates conversation counts, archived states, messages, and lengths.
         """
-        total_conv = self.db.scalar(select(func.count(Conversation.id)).where(Conversation.workspace_id == workspace_id)) or 0
-        active_conv = self.db.scalar(select(func.count(Conversation.id)).where(Conversation.workspace_id == workspace_id, Conversation.is_archived == False)) or 0
+        total_conv = self.db.scalar(select(func.count(Conversation.id)).where(Conversation.workspace_id == workspace_id, Conversation.deleted_at.is_(None))) or 0
+        active_conv = self.db.scalar(select(func.count(Conversation.id)).where(Conversation.workspace_id == workspace_id, Conversation.is_archived == False, Conversation.deleted_at.is_(None))) or 0
         archived_conv = total_conv - active_conv
 
         total_messages = self.db.scalar(
             select(func.count(ChatMessage.id))
             .join(Conversation, Conversation.id == ChatMessage.conversation_id)
-            .where(Conversation.workspace_id == workspace_id)
+            .where(Conversation.workspace_id == workspace_id, Conversation.deleted_at.is_(None))
         ) or 0
 
         avg_len = (total_messages / total_conv) if total_conv > 0 else 0.0
@@ -233,60 +233,22 @@ class DashboardRepository:
 
     def get_recent_activities(self, workspace_id: int, limit: int = 20) -> List[Dict[str, Any]]:
         """
-        Merges most recent actions (uploads, searches, conversations, collection updates) chronologically.
+        Retrieves recent activity events chronologically from unified ActivityLog.
         """
-        # Fetch individual feeds up to limit
-        uploads = self.db.scalars(
-            select(Document).where(Document.workspace_id == workspace_id)
-            .order_by(desc(Document.created_at)).limit(limit)
+        from app.models.activity_log import ActivityLog
+        logs = self.db.scalars(
+            select(ActivityLog)
+            .where(ActivityLog.workspace_id == workspace_id)
+            .order_by(desc(ActivityLog.created_at), desc(ActivityLog.id))
+            .limit(limit)
         ).all()
-
-        searches = self.db.scalars(
-            select(SearchHistory).where(SearchHistory.workspace_id == workspace_id)
-            .order_by(desc(SearchHistory.created_at)).limit(limit)
-        ).all()
-
-        conversations = self.db.scalars(
-            select(Conversation).where(Conversation.workspace_id == workspace_id)
-            .order_by(desc(Conversation.created_at)).limit(limit)
-        ).all()
-
-        collections = self.db.scalars(
-            select(Collection).where(Collection.workspace_id == workspace_id)
-            .order_by(desc(Collection.updated_at)).limit(limit)
-        ).all()
-
-        # Build activity payload objects
+        
         activities = []
-        for d in uploads:
+        for log in logs:
             activities.append({
-                "type": "document_upload",
-                "description": f"Uploaded document: {d.filename}",
-                "timestamp": d.created_at,
-                "metadata": {"id": d.id, "filename": d.filename, "size": d.file_size}
+                "type": log.event_type,
+                "description": log.description,
+                "timestamp": log.created_at,
+                "metadata": {}
             })
-        for s in searches:
-            activities.append({
-                "type": "search_query",
-                "description": f"Executed search query: '{s.query}'",
-                "timestamp": s.created_at,
-                "metadata": {"id": s.id, "query": s.query, "latency_ms": s.execution_time_ms}
-            })
-        for c in conversations:
-            activities.append({
-                "type": "conversation_start",
-                "description": f"Started conversation: '{c.title or 'Untitled'}'",
-                "timestamp": c.created_at,
-                "metadata": {"id": c.id, "title": c.title}
-            })
-        for col in collections:
-            activities.append({
-                "type": "collection_update",
-                "description": f"Updated collection: '{col.name}'",
-                "timestamp": col.updated_at or col.created_at,
-                "metadata": {"id": col.id, "name": col.name}
-            })
-
-        # Sort and return top N
-        activities.sort(key=lambda x: x["timestamp"], reverse=True)
-        return activities[:limit]
+        return activities

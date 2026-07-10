@@ -42,6 +42,9 @@ def switch_active_workspace(
     """
     try:
         ws = service.switch_workspace(current_user.id, workspace_id)
+        if ws:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, ws.id, "workspace_switched", f"Switched workspace context to: '{ws.name}'")
         return {
             "success": True,
             "workspace_id": ws.id,

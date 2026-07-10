@@ -1,7 +1,7 @@
 <!-- app/templates/dashboard.html -->
 {% extends "layouts/app.html" %}
 
-{% block app_title %}Workspace Dashboard - Enterprise Knowledge Intelligence Platform{% endblock %}
+{% block app_title %}Dashboard - Enterprise Knowledge Intelligence Platform{% endblock %}
 
 {% block app_content %}
 <div class="container-fluid py-4 animate-fade-in-up">
@@ -10,7 +10,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h2 text-white fw-bold">Dashboard</h1>
-      <p class="text-muted mb-0">Welcome back! Here's what's happening across your workspace today.</p>
+      <p class="text-muted mb-0">Welcome back! Here's what's happening on the platform today.</p>
     </div>
     <div class="text-end">
       <span class="badge bg-secondary-subtle text-white border border-secondary px-3 py-2 rounded-pill" id="lastActivityBadge">
@@ -37,19 +37,6 @@
       </div>
     </div>
     
-    <!-- Collections Card -->
-    <div class="col-md-4 col-lg">
-      <div class="metric-card d-flex align-items-center gap-3">
-        <div class="metric-icon-wrapper bg-warning bg-opacity-15 text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 54px; height: 54px; flex-shrink: 0;">
-          <i class="bi bi-folder-fill fs-3"></i>
-        </div>
-        <div class="flex-grow-1 min-w-0">
-          <div class="text-muted text-uppercase small fw-bold mb-1 text-truncate">Collections</div>
-          <h3 class="text-white fw-bold mb-0" id="statCollCount">0</h3>
-          <div class="small text-muted text-truncate" id="statCollLargest">Largest: None</div>
-        </div>
-      </div>
-    </div>
 
     <!-- Conversations Card -->
     <div class="col-md-4 col-lg">
@@ -149,10 +136,10 @@
     <div class="col-lg-5">
       <div class="dashboard-section-card h-100">
         <h5 class="text-white fw-bold mb-3 border-bottom border-secondary pb-2">
-          <i class="bi bi-briefcase me-2 text-primary"></i>Workspace Details
+          <i class="bi bi-cpu me-2 text-primary"></i>System Details
         </h5>
         <div class="row g-3 text-white small">
-          <div class="col-6 text-muted">Workspace Name</div>
+          <div class="col-6 text-muted">System Context</div>
           <div class="col-6 text-end fw-semibold text-truncate" id="valWsName">loading...</div>
           
           <div class="col-6 text-muted">Owner</div>
@@ -161,14 +148,8 @@
           <div class="col-6 text-muted">Created Date</div>
           <div class="col-6 text-end fw-semibold" id="valWsCreated">loading...</div>
 
-          <div class="col-6 text-muted">Default Workspace</div>
-          <div class="col-6 text-end fw-semibold text-success"><i class="bi bi-check-circle-fill me-1"></i>Yes</div>
-
           <div class="col-6 text-muted">Document Count</div>
           <div class="col-6 text-end fw-semibold" id="valDocCount">0</div>
-
-          <div class="col-6 text-muted">Collection Count</div>
-          <div class="col-6 text-end fw-semibold" id="valCollCountDetail">0</div>
 
           <div class="col-6 text-muted">Conversation Count</div>
           <div class="col-6 text-end fw-semibold" id="valConvCountDetail">0</div>
@@ -229,6 +210,43 @@
   })();
 
   document.addEventListener("DOMContentLoaded", async () => {
+    // Fallback in case browser caching serves stale app.js without parseUTCDate
+    window.parseUTCDate = function (isoString) {
+      if (isoString === null || isoString === undefined || isoString === "") {
+        return new Date();
+      }
+      if (isoString instanceof Date) {
+        return isoString;
+      }
+      if (typeof isoString === "number") {
+        const d = new Date(isoString);
+        return isNaN(d.getTime()) ? new Date() : d;
+      }
+      if (typeof isoString !== "string") {
+        return new Date();
+      }
+      let dateStr = isoString;
+      if (!dateStr.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(dateStr)) {
+        dateStr = dateStr + "Z";
+      }
+      const parsed = new Date(dateStr);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    };
+
+    window.normalizeTimestamp = function (value) {
+      if (value instanceof Date) {
+        return value;
+      }
+      if (typeof value === "number") {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? new Date() : d;
+      }
+      if (typeof value === "string") {
+        return window.parseUTCDate(value);
+      }
+      return new Date();
+    };
+
     try {
       if (typeof api === 'undefined') {
         console.error("API client not available");
@@ -239,25 +257,17 @@
       if (!data) return;
 
       // Bind workspace overview
-      document.getElementById("lastActivityBadge").innerText = "Last Activity: " + new Date(data.overview.last_activity_at).toLocaleString();
+      document.getElementById("lastActivityBadge").innerText = "Last Activity: " + window.parseUTCDate(data.overview.last_activity_at).toLocaleString();
       document.getElementById("valWsName").innerText = data.overview.workspace_name;
       document.getElementById("valWsOwner").innerText = data.overview.owner_name;
-      document.getElementById("valWsCreated").innerText = new Date(data.overview.created_at).toLocaleDateString();
-      document.getElementById("valLastActivity").innerText = new Date(data.overview.last_activity_at).toLocaleString();
+      document.getElementById("valWsCreated").innerText = window.parseUTCDate(data.overview.created_at).toLocaleDateString();
+      document.getElementById("valLastActivity").innerText = window.parseUTCDate(data.overview.last_activity_at).toLocaleString();
 
       // Bind primary card metrics
       document.getElementById("statDocsCount").innerText = data.document_metrics.total_documents;
       document.getElementById("statDocsToday").innerText = data.document_metrics.uploaded_today + " uploaded today";
       document.getElementById("valDocCount").innerText = data.document_metrics.total_documents;
       
-      document.getElementById("statCollCount").innerText = data.collection_metrics.total_collections;
-      document.getElementById("valCollCountDetail").innerText = data.collection_metrics.total_collections;
-      if (data.collection_metrics.largest_collection_name) {
-        document.getElementById("statCollLargest").innerText = "Largest: " + data.collection_metrics.largest_collection_name;
-      } else {
-        document.getElementById("statCollLargest").innerText = "Largest: None";
-      }
-
       document.getElementById("statConvCount").innerText = data.conversation_metrics.total_conversations;
       document.getElementById("valConvCountDetail").innerText = data.conversation_metrics.total_conversations;
       document.getElementById("statConvActiveArchived").innerText = `${data.conversation_metrics.active_conversations} Active / ${data.conversation_metrics.archived_conversations} Arc`;
@@ -287,15 +297,27 @@
           let badgeClass = "bg-success bg-opacity-15 text-success";
           let icon = "bi-cloud-upload-fill";
           
-          if (item.type === "search_query") {
+          if (item.type === "search_query" || item.type === "search_executed") {
             badgeClass = "bg-info bg-opacity-15 text-info";
             icon = "bi-search";
-          } else if (item.type === "conversation_start") {
+          } else if (item.type === "conversation_start" || item.type === "conversation_created") {
             badgeClass = "bg-primary bg-opacity-15 text-primary";
-            icon = "bi-chat-dots-fill";
-          } else if (item.type === "collection_update") {
-            badgeClass = "bg-warning bg-opacity-15 text-warning";
-            icon = "bi-folder-fill";
+            icon = "bi-chat-left-text-fill";
+          } else if (item.type === "conversation_renamed") {
+            badgeClass = "bg-info bg-opacity-15 text-info";
+            icon = "bi-pencil-fill";
+          } else if (item.type === "conversation_deleted" || item.type === "document_deleted") {
+            badgeClass = "bg-danger bg-opacity-15 text-danger";
+            icon = "bi-trash-fill";
+          } else if (item.type === "workspace_created") {
+            badgeClass = "bg-primary bg-opacity-15 text-primary";
+            icon = "bi-briefcase-fill";
+          } else if (item.type === "workspace_switched") {
+            badgeClass = "bg-secondary bg-opacity-15 text-secondary";
+            icon = "bi-arrow-left-right";
+          } else if (item.type === "indexing_completed") {
+            badgeClass = "bg-success bg-opacity-15 text-success";
+            icon = "bi-cpu-fill";
           }
 
           const tr = document.createElement("tr");
@@ -306,8 +328,8 @@
                 <i class="bi ${icon}"></i>
               </span>
             </td>
-            <td class="text-white font-semibold">${item.description}</td>
-            <td class="text-muted small">${new Date(item.timestamp).toLocaleString()}</td>
+            <td class="text-white font-semibold">${item.description ? item.description.replace(/workspace/gi, "context") : ""}</td>
+            <td class="text-muted small">${window.parseUTCDate(item.timestamp).toLocaleString()}</td>
           `;
           activityTable.appendChild(tr);
         });

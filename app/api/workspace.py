@@ -32,11 +32,15 @@ def create_workspace(
     Creates a new workspace environment for the user.
     """
     try:
-        return service.create_workspace(
+        ws = service.create_workspace(
             owner_id=current_user.id,
             name=payload.name,
             description=payload.description
         )
+        if ws:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, ws.id, "workspace_created", f"Created workspace: '{ws.name}'")
+        return ws
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:

@@ -8,7 +8,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h2 text-white fw-bold">Document Management</h1>
-      <p class="text-muted mb-0">Upload enterprise files, trigger chunk processing/vector indexing, and map document collections.</p>
+      <p class="text-muted mb-0">Upload enterprise files, trigger chunk processing and vector indexing into the knowledge base.</p>
     </div>
   </div>
 
@@ -80,6 +80,43 @@
 {% block app_extra_scripts %}
 <script>
   document.addEventListener("DOMContentLoaded", () => {
+    // Fallback in case browser caching serves stale app.js without parseUTCDate
+    window.parseUTCDate = function (isoString) {
+      if (isoString === null || isoString === undefined || isoString === "") {
+        return new Date();
+      }
+      if (isoString instanceof Date) {
+        return isoString;
+      }
+      if (typeof isoString === "number") {
+        const d = new Date(isoString);
+        return isNaN(d.getTime()) ? new Date() : d;
+      }
+      if (typeof isoString !== "string") {
+        return new Date();
+      }
+      let dateStr = isoString;
+      if (!dateStr.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(dateStr)) {
+        dateStr = dateStr + "Z";
+      }
+      const parsed = new Date(dateStr);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    };
+
+    window.normalizeTimestamp = function (value) {
+      if (value instanceof Date) {
+        return value;
+      }
+      if (typeof value === "number") {
+        const d = new Date(value);
+        return isNaN(d.getTime()) ? new Date() : d;
+      }
+      if (typeof value === "string") {
+        return window.parseUTCDate(value);
+      }
+      return new Date();
+    };
+
     const tableBodyEl = document.getElementById("documentsTableBody");
     const uploadFormEl = document.getElementById("uploadForm");
     const fileInputEl = document.getElementById("fileInput");
@@ -149,7 +186,7 @@
                 <td class="text-muted">${doc.file_extension.toUpperCase()}</td>
                 <td class="text-muted">${(doc.file_size / 1024).toFixed(2)} KB</td>
                 <td>${statusBadge}</td>
-                <td class="text-muted small">${new Date(doc.created_at).toLocaleString()}</td>
+                <td class="text-muted small">${window.parseUTCDate(doc.created_at).toLocaleString()}</td>
                 <td>
                   ${processBtn}
                   <button class="btn btn-sm btn-outline-danger btn-delete-doc" data-id="${doc.id}" title="Delete"><i class="bi bi-trash"></i></button>

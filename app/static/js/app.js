@@ -94,6 +94,48 @@
   }
 })();
 
+
+/* ============================================================
+   Timezone & Datetime Utilities
+   Parses naive UTC datetime string from backend and forces UTC parsing
+   so the browser parses it as the user's local timezone.
+   ============================================================ */
+window.parseUTCDate = function (isoString) {
+  if (isoString === null || isoString === undefined || isoString === "") {
+    return new Date();
+  }
+  if (isoString instanceof Date) {
+    return isoString;
+  }
+  if (typeof isoString === "number") {
+    const d = new Date(isoString);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  if (typeof isoString !== "string") {
+    return new Date();
+  }
+  let dateStr = isoString;
+  if (!dateStr.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(dateStr)) {
+    dateStr = dateStr + "Z";
+  }
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
+window.normalizeTimestamp = function (value) {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (typeof value === "number") {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? new Date() : d;
+  }
+  if (typeof value === "string") {
+    return window.parseUTCDate(value);
+  }
+  return new Date();
+};
+
 /* ============================================================
    UI Helpers: Toast Notification & Loading Spinner
    ============================================================ */

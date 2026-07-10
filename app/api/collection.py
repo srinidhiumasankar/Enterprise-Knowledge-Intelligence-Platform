@@ -34,12 +34,16 @@ def create_collection(
     Creates a new collection under the designated or default workspace.
     """
     try:
-        return service.create_collection(
+        col = service.create_collection(
             owner_id=current_user.id,
             name=payload.name,
             description=payload.description,
             workspace_id=payload.workspace_id
         )
+        if col:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, col.workspace_id, "collection_changes", f"Created collection: '{col.name}'")
+        return col
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except PermissionError as e:
@@ -105,12 +109,16 @@ def update_collection(
     Updates collection title name or description description.
     """
     try:
-        return service.update_collection(
+        col = service.update_collection(
             collection_id=collection_id,
             owner_id=current_user.id,
             name=payload.name,
             description=payload.description
         )
+        if col:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, col.workspace_id, "collection_changes", f"Updated collection: '{col.name}'")
+        return col
     except KeyError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValueError as e:
@@ -132,7 +140,13 @@ def delete_collection(
     Deletes the collection metadata record.
     """
     try:
+        col = service.get_collection(collection_id, current_user.id)
+        name = col.name
+        workspace_id = col.workspace_id
         success = service.delete_collection(collection_id, current_user.id)
+        if success:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, workspace_id, "collection_changes", f"Deleted collection: '{name}'")
         return {
             "success": success,
             "message": "Collection deleted successfully" if success else "Collection could not be deleted"
@@ -157,7 +171,11 @@ def add_document_to_collection(
     Links a document to the collection.
     """
     try:
+        col = service.get_collection(collection_id, current_user.id)
         success = service.add_document(collection_id, current_user.id, payload.document_id)
+        if success:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, col.workspace_id, "collection_changes", f"Added document to collection: '{col.name}'")
         return {
             "success": success,
             "message": "Document added to collection successfully" if success else "Link could not be established"
@@ -184,7 +202,11 @@ def remove_document_from_collection(
     Unlinks a document from the collection.
     """
     try:
+        col = service.get_collection(collection_id, current_user.id)
         success = service.remove_document(collection_id, current_user.id, document_id)
+        if success:
+            from app.utils.activity_logger import log_activity
+            log_activity(service.repo.db, current_user.id, col.workspace_id, "collection_changes", f"Removed document from collection: '{col.name}'")
         return {
             "success": success,
             "message": "Document removed from collection successfully" if success else "Link could not be unlinked"

@@ -140,3 +140,43 @@ class GeminiService:
                 raise GeminiTimeoutError(f"Gemini API request timed out: {e}") from e
                 
             raise GeminiError(f"Failed to generate answer due to an unexpected error: {e}") from e
+
+    def generate_stream(
+        self,
+        prompt: str,
+        model_name: str = "gemini-2.5-flash",
+        timeout: float = 30.0,
+    ):
+        """
+        Send a prompt to the Gemini API and yield chunks of the response as they arrive.
+        """
+        if not prompt or not prompt.strip():
+            logger.error("Empty prompt passed to generate_stream.")
+            raise ValueError("Prompt cannot be empty or whitespace-only.")
+
+        logger.info(f"Sending streaming request to Gemini API (model={model_name}, timeout={timeout}s, prompt_len={len(prompt)})")
+        
+        try:
+            timeout_ms = int(timeout * 1000)
+            client = genai.Client(
+                api_key=self.api_key,
+                http_options=types.HttpOptions(timeout=timeout_ms)
+            )
+        except Exception as e:
+            logger.error(f"Failed to configure GenAI client for request: {e}")
+            raise GeminiConfigurationError(f"Client setup failed: {e}")
+
+        try:
+            response = client.models.generate_content_stream(
+                model=model_name,
+                contents=prompt,
+            )
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+        except errors.APIError as api_err:
+            logger.error(f"Gemini API error during streaming generation: {api_err}")
+            raise GeminiAPIError(f"Gemini API streaming failed: {api_err}")
+        except Exception as e:
+            logger.error(f"Unexpected error during Gemini streaming: {e}")
+            raise GeminiError(f"Streaming failed: {e}")
