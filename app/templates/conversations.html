@@ -6,6 +6,15 @@
 
 {% block app_extra_head %}
 <link rel="stylesheet" href="{{ url_for('static', path='css/chat.css') }}" />
+<!-- Phase 11.1: AI Response Rendering Libraries -->
+<!-- highlight.js — syntax highlighting, Atom One Dark theme (matches EKIP dark UI) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-dark.min.css" />
+<!-- marked.js — production Markdown parser with GFM tables, fenced code blocks -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/13.0.3/marked.min.js"></script>
+<!-- highlight.js — 190+ language syntax highlighting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
+<!-- DOMPurify — XSS sanitization of rendered HTML output -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 {% endblock %}
 
 {% block app_content %}
@@ -385,210 +394,175 @@
     }
 
     /* ============================================================
-
-    /* ============================================================
-       Markdown Parser Utilities
+       Phase 11.1 — Markdown Rendering Engine
+       Uses: marked.js (parser) + highlight.js (syntax) + DOMPurify (XSS)
        ============================================================ */
+
+    // Configure marked.js with highlight.js integration
+    (function initMarked() {
+      if (typeof marked === "undefined" || typeof hljs === "undefined") return;
+
+      // Custom renderer: override code block to inject copy button header
+      const renderer = new marked.Renderer();
+
+      renderer.code = function(codeObj) {
+        // marked v13 passes an object: { text, lang, escaped }
+        const code = (codeObj && codeObj.text != null) ? codeObj.text : String(codeObj);
+        const lang = (codeObj && codeObj.lang) ? codeObj.lang.trim() : "";
+
+        let highlightedCode;
+        let resolvedLang = "";
+
+        if (lang && hljs.getLanguage(lang)) {
+          resolvedLang = lang;
+          try {
+            highlightedCode = hljs.highlight(code, { language: lang, ignoreIllegals: true }).value;
+          } catch (_) {
+            highlightedCode = hljs.highlightAuto(code).value;
+          }
+        } else if (lang) {
+          // Unknown explicit language — still attempt auto detect
+          const auto = hljs.highlightAuto(code);
+          resolvedLang = auto.language || lang;
+          highlightedCode = auto.value;
+        } else {
+          const auto = hljs.highlightAuto(code);
+          resolvedLang = auto.language || "text";
+          highlightedCode = auto.value;
+        }
+
+        const langLabel = resolvedLang ? resolvedLang.toLowerCase() : "text";
+
+        return `<div class="md-code-block">
+  <div class="md-code-header">
+    <span class="md-code-lang">${langLabel}</span>
+    <button class="md-copy-btn" data-clipboard-code="${code.replace(/"/g, '&quot;')}" aria-label="Copy code">
+      <i class="bi bi-clipboard" aria-hidden="true"></i> Copy
+    </button>
+  </div>
+  <pre class="hljs"><code class="language-${langLabel}">${highlightedCode}</code></pre>
+</div>`;
+      };
+
+      // Configure marked options
+      marked.setOptions({
+        renderer: renderer,
+        gfm: true,        // GitHub Flavored Markdown (tables, task lists, fenced code)
+        breaks: true,     // Convert single \n to <br>
+        pedantic: false,
+      });
+    })();
+
+    /**
+     * renderMarkdown(text)
+     * ---------------------
+     * Converts raw Markdown text to sanitized HTML.
+     * Falls back to escaped plain text if libraries are unavailable.
+     */
     function renderMarkdown(text) {
-      if (!text) return '';
+      if (!text) return "";
 
-      // Escape HTML to prevent XSS
-      let html = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      // Process Github alerts / badges [!NOTE], [!TIP], etc. before markdown blocks
-      html = html.replace(/\[!NOTE\]/g, '<span class="badge bg-primary me-1">NOTE</span>');
-      html = html.replace(/\[!TIP\]/g, '<span class="badge bg-success me-1">TIP</span>');
-      html = html.replace(/\[!IMPORTANT\]/g, '<span class="badge bg-warning text-dark me-1">IMPORTANT</span>');
-      html = html.replace(/\[!WARNING\]/g, '<span class="badge bg-warning text-dark me-1">WARNING</span>');
-      html = html.replace(/\[!CAUTION\]/g, '<span class="badge bg-danger me-1">CAUTION</span>');
-
-      // Code blocks: ```language ... ```
-      // Match block code with language: e.g. ```javascript\ncode
-      html = html.replace(/```(\w+)\n([\s\S]*?)```/g, (match, lang, code) => {
-        const trimmed = code.trim();
-        return `<pre><code class="language-${lang}">${trimmed}</code></pre>`;
-      });
-      // Fallback for code blocks without a specified language or single-line code blocks
-      html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
-        const trimmed = code.trim();
-        return `<pre><code>${trimmed}</code></pre>`;
-      });
-
-      // Inline code: `code`
-      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-      // Strong text: **text** (do not cross newlines)
-      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-      // Emphasized text: *text* (do not cross newlines)
-      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-      // Links: [Text](URL)
-      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
-      // Helper to render markdown tables
-      function renderTableHTML(rows) {
-        if (rows.length === 0) return '';
-        let tableHtml = '<table class="table table-bordered border-secondary table-striped"><thead>';
-        let hasHeader = false;
-        for (let j = 0; j < rows.length; j++) {
-          const cells = rows[j].split('|').map(c => c.trim()).filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-          if (rows[j].match(/^[|\s-:]+$/)) {
-            if (j === 1) {
-              tableHtml += '</thead><tbody>';
-              hasHeader = true;
-            }
-            continue;
-          }
-          tableHtml += '<tr>';
-          cells.forEach(cell => {
-            const tag = (j === 0 && !hasHeader) ? 'th' : 'td';
-            tableHtml += `<${tag}>${cell}</${tag}>`;
+      // Library path: marked → DOMPurify
+      if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
+        try {
+          const rawHtml = marked.parse(String(text));
+          return DOMPurify.sanitize(rawHtml, {
+            ALLOWED_TAGS: [
+              "p", "br", "strong", "em", "u", "s", "del",
+              "h1", "h2", "h3", "h4", "h5", "h6",
+              "ul", "ol", "li",
+              "blockquote",
+              "pre", "code",
+              "table", "thead", "tbody", "tr", "th", "td",
+              "a", "img",
+              "hr",
+              "div", "span",
+              "button", "i"
+            ],
+            ALLOWED_ATTR: [
+              "class", "id", "href", "src", "alt", "title",
+              "target", "rel",
+              "data-clipboard-code",
+              "aria-label", "aria-hidden",
+              "style"
+            ],
+            ALLOW_DATA_ATTR: false,
+            FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input"],
+            FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
           });
-          tableHtml += '</tr>';
-        }
-        if (!hasHeader) {
-          tableHtml = tableHtml.replace('</thead>', '</thead><tbody>');
-        }
-        tableHtml += '</tbody></table>';
-        return tableHtml;
-      }
-
-      // Split into lines for list, table, and blockquote parsing
-      const lines = html.split('\n');
-      let inList = false;
-      let listType = null; // 'ul' or 'ol'
-      let inBlockquote = false;
-      let inTable = false;
-      let tableRows = [];
-      let resultLines = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        const lineTrim = line.trim();
-
-        // 1. Delimit and process Tables
-        if (lineTrim.startsWith('|') && lineTrim.endsWith('|')) {
-          if (inList) {
-            resultLines.push(`</${listType}>`);
-            inList = false;
-            listType = null;
-          }
-          if (inBlockquote) {
-            resultLines.push('</blockquote>');
-            inBlockquote = false;
-          }
-          if (!inTable) {
-            inTable = true;
-            tableRows = [];
-          }
-          tableRows.push(lineTrim);
-          continue;
-        } else {
-          if (inTable) {
-            resultLines.push(renderTableHTML(tableRows));
-            inTable = false;
-          }
-        }
-
-        // 2. Parse Blockquotes (lines starting with >)
-        const bMatch = line.match(/^(\s*)&gt;\s*(.*)$/);
-        if (bMatch) {
-          if (inList) {
-            resultLines.push(`</${listType}>`);
-            inList = false;
-            listType = null;
-          }
-          if (!inBlockquote) {
-            resultLines.push('<blockquote>');
-            inBlockquote = true;
-          }
-          line = bMatch[2];
-        } else {
-          if (inBlockquote) {
-            resultLines.push('</blockquote>');
-            inBlockquote = false;
-          }
-        }
-
-        // 3. Parse Lists (ordered/unordered)
-        const uMatch = line.match(/^(\s*)[-*+]\s+(.*)$/);
-        const oMatch = line.match(/^(\s*)\d+\.\s+(.*)$/);
-
-        if (uMatch) {
-          if (!inList || listType !== 'ul') {
-            if (inList) resultLines.push(`</${listType}>`);
-            resultLines.push('<ul>');
-            inList = true;
-            listType = 'ul';
-          }
-          resultLines.push(`<li>${uMatch[2]}</li>`);
-        } else if (oMatch) {
-          if (!inList || listType !== 'ol') {
-            if (inList) resultLines.push(`</${listType}>`);
-            resultLines.push('<ol>');
-            inList = true;
-            listType = 'ol';
-          }
-          resultLines.push(`<li>${oMatch[2]}</li>`);
-        } else {
-          if (inList) {
-            resultLines.push(`</${listType}>`);
-            inList = false;
-            listType = null;
-          }
-          resultLines.push(line);
+        } catch (err) {
+          console.error("[EKIP] Markdown render error:", err);
+          // Safe fallback: return escaped plain text
+          return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
       }
 
-      if (inTable) {
-        resultLines.push(renderTableHTML(tableRows));
-      }
-      if (inList) {
-        resultLines.push(`</${listType}>`);
-      }
-      if (inBlockquote) {
-        resultLines.push('</blockquote>');
-      }
+      // Fallback: plain HTML escape if libraries failed to load
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+    }
 
-      html = resultLines.join('\n');
+    /**
+     * applyCodeButtons(container)
+     * ----------------------------
+     * Wires up all .md-copy-btn elements inside a DOM container.
+     * Safe to call multiple times; already-wired buttons are skipped.
+     */
+    function applyCodeButtons(container) {
+      if (!container) return;
+      container.querySelectorAll(".md-copy-btn:not([data-wired])").forEach(btn => {
+        btn.setAttribute("data-wired", "true");
+        btn.addEventListener("click", () => {
+          const code = btn.getAttribute("data-clipboard-code") || "";
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(() => {
+              btn.innerHTML = `<i class="bi bi-clipboard-check" aria-hidden="true"></i> Copied!`;
+              btn.classList.add("copied");
+              setTimeout(() => {
+                btn.innerHTML = `<i class="bi bi-clipboard" aria-hidden="true"></i> Copy`;
+                btn.classList.remove("copied");
+              }, 2000);
+            }).catch(() => {
+              fallbackCopy(code, btn);
+            });
+          } else {
+            fallbackCopy(code, btn);
+          }
+        });
+      });
+    }
 
-      // Process headers
-      html = html.replace(/^###### (.*)$/gm, '<h6>$1</h6>');
-      html = html.replace(/^##### (.*)$/gm, '<h5>$1</h5>');
-      html = html.replace(/^#### (.*)$/gm, '<h4>$1</h4>');
-      html = html.replace(/^### (.*)$/gm, '<h3>$1</h3>');
-      html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
-      html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
-
-      // Add paragraph structures to non-layout elements
-      const parts = html.split(/(<pre>[\s\S]*?<\/pre>|<table[\s\S]*?<\/table>|<blockquote>[\s\S]*?<\/blockquote>|<ul>[\s\S]*?<\/ul>|<ol>[\s\S]*?<\/ol>|<h[1-6]>.*?<\/h[1-6]>)/);
-      for (let i = 0; i < parts.length; i++) {
-        if (!parts[i].startsWith('<pre>') &&
-          !parts[i].startsWith('<table') &&
-          !parts[i].startsWith('<blockquote>') &&
-          !parts[i].startsWith('<ul>') &&
-          !parts[i].startsWith('<ol>') &&
-          !parts[i].startsWith('<h')) {
-          parts[i] = parts[i].split(/\n\n+/).map(p => {
-            const trimmed = p.trim();
-            if (!trimmed) return '';
-            if (trimmed.startsWith('<ul>') || trimmed.startsWith('<ol>') || trimmed.startsWith('<h') || trimmed.startsWith('<p>')) {
-              return trimmed;
-            }
-            return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
-          }).join('');
-        }
-      }
-      return parts.join('');
+    /**
+     * fallbackCopy(code, btn)
+     * ------------------------
+     * execCommand("copy") fallback for browsers without Clipboard API.
+     */
+    function fallbackCopy(code, btn) {
+      const ta = document.createElement("textarea");
+      ta.value = code;
+      ta.style.cssText = "position:fixed;left:-9999px;top:-9999px;opacity:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand("copy");
+        btn.innerHTML = `<i class="bi bi-clipboard-check" aria-hidden="true"></i> Copied!`;
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.innerHTML = `<i class="bi bi-clipboard" aria-hidden="true"></i> Copy`;
+          btn.classList.remove("copied");
+        }, 2000);
+      } catch (_) {}
+      document.body.removeChild(ta);
     }
 
     /* ============================================================
        Timestamp Formatter Utilities
        ============================================================ */
+
     function formatTime(isoString) {
       if (isoString === null || isoString === undefined || isoString === '') return '';
       try {
@@ -905,6 +879,9 @@
 
       // Scroll independently to bottom (force scroll on load)
       scrollToBottom(true);
+
+      // Wire copy buttons for all rendered code blocks
+      applyCodeButtons(messagesEl);
     };
 
     /* ============================================================
@@ -1091,13 +1068,16 @@
                   searchResults = event.results || [];
                 } else if (event.type === "text") {
                   accumulatedText += event.content;
-                  streamingContentEl.innerHTML = renderMarkdown(accumulatedText);
+                  // During streaming: show plain text to avoid flicker on incomplete code blocks
+                  streamingContentEl.textContent = accumulatedText;
                   scrollToBottom();
                 } else if (event.type === "error") {
                   throw new Error(event.detail);
                 } else if (event.type === "done") {
                   accumulatedText = event.content;
+                  // Final render: full markdown with syntax highlighting
                   streamingContentEl.innerHTML = renderMarkdown(accumulatedText);
+                  applyCodeButtons(botWrapper);
                   const timestampEl = botWrapper.querySelector(".message-timestamp");
                   if (timestampEl && event.created_at) {
                     timestampEl.textContent = formatTime(new Date(event.created_at));
