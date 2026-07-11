@@ -1017,3 +1017,201 @@
 .streaming-content:has(.md-code-block) {
   white-space: normal;
 }
+
+/* =============================================================
+   Phase 11.2 — Advanced Markdown Rendering Styles
+   ============================================================= */
+
+/* ── Task Lists ──────────────────────────────────────────────── */
+.message-content ul.contains-task-list,
+.message-content ol.contains-task-list {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+.message-content .task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.18rem 0;
+  margin-bottom: 0.3rem;
+  line-height: 1.6;
+}
+
+.message-content .task-checkbox-wrap {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.1rem;
+}
+
+/* Hide the native disabled checkbox */
+.message-content .task-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Custom checkbox visual */
+.message-content .task-checkbox-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+/* Checked state */
+.message-content .task-list-item.task-done .task-checkbox-icon {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.6);
+}
+
+.message-content .task-list-item.task-done .task-checkbox-icon::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #4caf50;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translate(3px, 0px);
+}
+
+/* Done item text gets muted strikethrough */
+.message-content .task-list-item.task-done .task-text {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+}
+
+.message-content .task-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* ── Responsive Images ───────────────────────────────────────── */
+.message-content .md-figure {
+  margin: 1rem 0;
+  display: block;
+  text-align: center;
+}
+
+.message-content .md-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: block;
+  margin: 0 auto;
+}
+
+.message-content figcaption {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  margin-top: 0.4rem;
+  font-style: italic;
+}
+
+.message-content .md-image-placeholder {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+/* ── Auto-linked URLs (bare plain text → anchor) ────────────── */
+.message-content .md-autolink {
+  color: #7986cb;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  word-break: break-all;
+}
+
+.message-content .md-autolink:hover {
+  color: #9fa8da;
+  text-decoration: underline;
+}
+
+/* ── Enhanced Blockquote ─────────────────────────────────────── */
+.message-content blockquote {
+  margin: 0.85rem 0;
+  padding: 0.65rem 1.1rem;
+  border-left: 4px solid var(--clr-accent-1, #5c6bc0);
+  background: rgba(92, 107, 192, 0.07);
+  border-radius: 0 8px 8px 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-style: italic;
+  position: relative;
+}
+
+.message-content blockquote::before {
+  content: "\201C";
+  position: absolute;
+  top: -0.25rem;
+  left: 0.65rem;
+  font-size: 1.8rem;
+  color: var(--clr-accent-1, #5c6bc0);
+  opacity: 0.4;
+  line-height: 1;
+  font-family: Georgia, serif;
+}
+
+.message-content blockquote p {
+  margin: 0;
+  padding-left: 0.75rem;
+}
+
+/* ── Improved Table Header ───────────────────────────────────── */
+.message-content thead tr {
+  background: linear-gradient(135deg, rgba(92, 107, 192, 0.22), rgba(63, 81, 181, 0.18));
+}
+
+.message-content tfoot tr {
+  background: rgba(255, 255, 255, 0.03);
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ── Strikethrough / Delete ──────────────────────────────────── */
+.message-content del,
+.message-content s {
+  color: rgba(255, 255, 255, 0.4);
+  text-decoration-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ── Better list nesting colors ─────────────────────────────── */
+.message-content li::marker {
+  color: rgba(92, 107, 192, 0.7);
+}
+
+/* ── Mobile responsiveness improvements ─────────────────────── */
+@media (max-width: 767.98px) {
+  .message-content .md-code-block {
+    border-radius: 8px;
+  }
+  .message-content .md-image {
+    max-width: 100%;
+  }
+  .message-content table {
+    font-size: 0.82rem;
+  }
+  .message-content .task-list-item {
+    gap: 0.4rem;
+  }
+}

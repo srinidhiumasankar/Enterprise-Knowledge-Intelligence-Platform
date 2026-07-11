@@ -8,7 +8,8 @@
 <link rel="stylesheet" href="{{ url_for('static', path='css/chat.css') }}" />
 <!-- Phase 11.1: AI Response Rendering Libraries -->
 <!-- highlight.js — syntax highlighting, Atom One Dark theme (matches EKIP dark UI) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-dark.min.css" />
+<link rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-dark.min.css" />
 <!-- marked.js — production Markdown parser with GFM tables, fenced code blocks -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/13.0.3/marked.min.js"></script>
 <!-- highlight.js — 190+ language syntax highlighting -->
@@ -394,19 +395,18 @@
     }
 
     /* ============================================================
-       Phase 11.1 — Markdown Rendering Engine
+       Phase 11.2 — Advanced Markdown Rendering Engine
        Uses: marked.js (parser) + highlight.js (syntax) + DOMPurify (XSS)
        ============================================================ */
 
-    // Configure marked.js with highlight.js integration
+    // Configure marked.js with all Phase 11.2 renderers
     (function initMarked() {
       if (typeof marked === "undefined" || typeof hljs === "undefined") return;
 
-      // Custom renderer: override code block to inject copy button header
       const renderer = new marked.Renderer();
 
-      renderer.code = function(codeObj) {
-        // marked v13 passes an object: { text, lang, escaped }
+      /* ── Code Block ─────────────────────────────────────────────── */
+      renderer.code = function (codeObj) {
         const code = (codeObj && codeObj.text != null) ? codeObj.text : String(codeObj);
         const lang = (codeObj && codeObj.lang) ? codeObj.lang.trim() : "";
 
@@ -421,7 +421,6 @@
             highlightedCode = hljs.highlightAuto(code).value;
           }
         } else if (lang) {
-          // Unknown explicit language — still attempt auto detect
           const auto = hljs.highlightAuto(code);
           resolvedLang = auto.language || lang;
           highlightedCode = auto.value;
@@ -432,11 +431,12 @@
         }
 
         const langLabel = resolvedLang ? resolvedLang.toLowerCase() : "text";
+        const escapedCode = code.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
         return `<div class="md-code-block">
   <div class="md-code-header">
     <span class="md-code-lang">${langLabel}</span>
-    <button class="md-copy-btn" data-clipboard-code="${code.replace(/"/g, '&quot;')}" aria-label="Copy code">
+    <button class="md-copy-btn" data-clipboard-code="${escapedCode}" aria-label="Copy code">
       <i class="bi bi-clipboard" aria-hidden="true"></i> Copy
     </button>
   </div>
@@ -444,55 +444,146 @@
 </div>`;
       };
 
-      // Configure marked options
-      marked.setOptions({
+      /* ── Task List Items ─────────────────────────────────────────── */
+      renderer.listitem = function (item) {
+        if (item.task) {
+          const checked = item.checked ? " checked" : "";
+          const doneCls = item.checked ? " task-done" : " task-todo";
+          // Use item.text (inner HTML already parsed by marked)
+          const innerHtml = item.text || "";
+          return `<li class="task-list-item${doneCls}"><span class="task-checkbox-wrap"><input type="checkbox" class="task-checkbox" disabled${checked}><span class="task-checkbox-icon"></span></span><span class="task-text">${innerHtml}</span></li>`;
+        }
+        return `<li>${item.text || ""}</li>`;
+      };
+
+      /* ── Responsive Images ───────────────────────────────────────── */
+      renderer.image = function (imgObj) {
+        const href = imgObj.href || "";
+        const title = imgObj.title ? ` title="${imgObj.title}"` : "";
+        const alt = imgObj.text ? ` alt="${imgObj.text}"` : "";
+        // Only allow http/https image sources (block data: URIs)
+        if (!href || (!href.startsWith("http://") && !href.startsWith("https://"))) {
+          return `<span class="md-image-placeholder">[image]</span>`;
+        }
+        return `<figure class="md-figure"><img src="${href}"${alt}${title} class="md-image" loading="lazy" referrerpolicy="no-referrer"></figure>`;
+      };
+
+      /* ── External Links ──────────────────────────────────────────── */
+      renderer.link = function (linkObj) {
+        const href = linkObj.href || "#";
+        const title = linkObj.title ? ` title="${linkObj.title}"` : "";
+        const text = linkObj.text || href;
+        // Only open http/https in new tab — anchor links stay in-page
+        const isExternal = href.startsWith("http://") || href.startsWith("https://");
+        const target = isExternal ? ` target="_blank" rel="noopener noreferrer"` : "";
+        return `<a href="${href}"${title}${target} class="md-link">${text}</a>`;
+      };
+
+      /* ── Auto-link plain URLs in paragraph text ──────────────────── */
+      // Transforms bare https://... and http://... into <a> links.
+      const URL_AUTOLINK_RE = /(?<!["\[=(>])\b(https?:\/\/[^\s<>"')\]]+)/g;
+
+      marked.use({
         renderer: renderer,
-        gfm: true,        // GitHub Flavored Markdown (tables, task lists, fenced code)
-        breaks: true,     // Convert single \n to <br>
+        gfm: true,
+        breaks: true,
         pedantic: false,
+        walkTokens(token) {
+          // Only auto-link raw text inside paragraphs/list-items that isn't already parsed as a link
+          if (token.type === "text" && token.raw) {
+            if (URL_AUTOLINK_RE.test(token.raw)) {
+              // Mark for post-processing — add a flag so renderMarkdown can finalize
+              token._hasRawUrl = true;
+            }
+            URL_AUTOLINK_RE.lastIndex = 0; // reset stateful regex
+          }
+        }
       });
     })();
 
     /**
+     * autoLinkPlainUrls(html)
+     * ─────────────────────────
+     * Post-process the sanitized HTML string to convert bare URLs that
+     * ended up as plain text (not already inside an <a> tag) into clickable links.
+     * Uses a negative lookbehind to skip URLs already inside href="..." attributes.
+     */
+    function autoLinkPlainUrls(html) {
+      // Split the HTML on existing <a ...>...</a> blocks so we only process text nodes
+      const parts = html.split(/(<a\b[^>]*>[\s\S]*?<\/a>)/gi);
+      return parts.map((part, i) => {
+        // Even indexes are text/other-html, odd indexes are existing <a> blocks → leave alone
+        if (i % 2 === 1) return part;
+        // Inside other HTML tags (e.g. href= attributes in non-<a> tags) — skip
+        // Replace bare URLs that appear outside of attribute quotes
+        return part.replace(
+          /(?<!["'=])\b(https?:\/\/[^\s<>"')\]]+)/g,
+          (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer" class="md-link md-autolink">${url}</a>`
+        );
+      }).join("");
+    }
+
+
+    /**
      * renderMarkdown(text)
      * ---------------------
-     * Converts raw Markdown text to sanitized HTML.
+     * Phase 11.2: marked → DOMPurify → autoLinkPlainUrls pipeline.
      * Falls back to escaped plain text if libraries are unavailable.
      */
     function renderMarkdown(text) {
       if (!text) return "";
 
-      // Library path: marked → DOMPurify
       if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
         try {
           const rawHtml = marked.parse(String(text));
-          return DOMPurify.sanitize(rawHtml, {
+          const safeHtml = DOMPurify.sanitize(rawHtml, {
             ALLOWED_TAGS: [
+              // Text formatting
               "p", "br", "strong", "em", "u", "s", "del",
+              // Headings
               "h1", "h2", "h3", "h4", "h5", "h6",
+              // Lists (including task lists)
               "ul", "ol", "li",
+              // Blockquotes
               "blockquote",
+              // Code
               "pre", "code",
-              "table", "thead", "tbody", "tr", "th", "td",
-              "a", "img",
-              "hr",
-              "div", "span",
+              // Tables
+              "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+              // Media & links
+              "a", "img", "figure", "figcaption",
+              // Layout
+              "hr", "div", "span",
+              // Task list checkboxes
+              "input",
+              // Code block header elements
               "button", "i"
             ],
             ALLOWED_ATTR: [
-              "class", "id", "href", "src", "alt", "title",
-              "target", "rel",
+              // Universal
+              "class", "id", "title",
+              // Link/media
+              "href", "src", "alt", "target", "rel",
+              // Code copy button
               "data-clipboard-code",
+              // Accessibility
               "aria-label", "aria-hidden",
+              // Task list checkbox
+              "type", "checked", "disabled",
+              // Image performance
+              "loading", "referrerpolicy",
+              // Inline style (needed for some hljs tokens)
               "style"
             ],
             ALLOW_DATA_ATTR: false,
-            FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input"],
-            FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover"],
+            // block only execution-capable tags; input (checkboxes) is now allowed above
+            FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "textarea", "select"],
+            FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
           });
+          // Post-process: auto-link any bare URLs that weren't already inside <a> tags
+          return autoLinkPlainUrls(safeHtml);
         } catch (err) {
           console.error("[EKIP] Markdown render error:", err);
-          // Safe fallback: return escaped plain text
           return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         }
       }
@@ -504,6 +595,7 @@
         .replace(/>/g, "&gt;")
         .replace(/\n/g, "<br>");
     }
+
 
     /**
      * applyCodeButtons(container)
@@ -555,7 +647,7 @@
           btn.innerHTML = `<i class="bi bi-clipboard" aria-hidden="true"></i> Copy`;
           btn.classList.remove("copied");
         }, 2000);
-      } catch (_) {}
+      } catch (_) { }
       document.body.removeChild(ta);
     }
 
