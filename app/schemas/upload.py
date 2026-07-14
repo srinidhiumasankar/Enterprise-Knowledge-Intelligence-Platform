@@ -51,6 +51,7 @@ class ProcessResponse(BaseModel):
     status: str
     characters: int
     preview: str
+    num_chunks: int | None = None
 
 
 class ChunkResponse(BaseModel):

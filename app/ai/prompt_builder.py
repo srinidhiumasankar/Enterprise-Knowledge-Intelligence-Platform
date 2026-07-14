@@ -77,13 +77,16 @@ class PromptBuilder:
         # Compile segments
         prompt_segments = [
             "You are a helpful, precise Enterprise Knowledge Intelligence Assistant. "
-            "Your goal is to answer the user's question accurately using ONLY the provided context blocks below.\n\n"
+            "Your goal is to answer the user's question accurately using the provided context blocks.\n\n"
             "=== STRICT CONSTRAINTS ===\n"
-            "1. Answer the question relying ONLY on the facts directly mentioned in the provided context blocks.\n"
-            "2. Do NOT extrapolate, assume, or integrate outside knowledge. If the answer is not explicitly present in the context, "
-            "you MUST state exactly: 'I cannot determine the answer from the uploaded documents.'\n"
-            "3. Keep the response concise but complete.\n"
-            "4. Preserve all technical terms, exact numbers, and nomenclature as they appear in the source.\n"
+            "1. Answer the question relying ONLY on the facts directly mentioned in the provided context blocks. Every single sentence in your generated answer MUST originate from the retrieved document chunks. Do NOT use or supplement with any outside knowledge, general background knowledge, or external facts. Rely strictly on the context.\n"
+            "2. Explicitly forbid and avoid any form of hallucination, invented facts, assumptions, extrapolation, or speculation. If the answer is not explicitly stated in the context, you must state exactly: 'I cannot determine the answer from the uploaded documents.'\n"
+            "3. If relevant document context exists in the context blocks, you MUST answer the question using that context. Do NOT state that the documents are insufficient or refuse to answer when valid context exists.\n"
+            "4. Only say that the uploaded documents contain insufficient information when the retrieved context genuinely contains no relevant facts to answer the question.\n"
+            "5. If multiple context chunks are retrieved, merge them naturally and coherently into a single answer without repeating information or duplicating content.\n"
+            "6. Add clear document citations to your answer whenever possible. Cite the source file name for every claim or fact using the format '(Source: <filename>)' (for example: (Source: ml_notes.txt) or (Source: architecture_specs.pdf)).\n"
+            "7. Keep the response concise but complete.\n"
+            "8. Preserve all technical terms, exact numbers, and nomenclature as they appear in the source.\n"
         ]
 
         if conversation_history:
@@ -108,5 +111,9 @@ class PromptBuilder:
         prompt_segments.append("=== ANSWER ===")
 
         prompt = "\n".join(prompt_segments)
+        logger.info("=== FINAL PROMPT SENT TO LLM ===")
+        logger.info(prompt)
+        logger.info("=================================")
+        logger.info(f"Final prompt contains retrieved context: {bool(chunks)}")
         logger.debug(f"Generated prompt length: {len(prompt)} characters.")
         return prompt

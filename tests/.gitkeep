@@ -1,5 +1,0 @@
-# tests/
-# -------
-# Automated test suite (pytest).
-# Unit and integration tests will be added in future phases.
-# This file exists solely to ensure the tests/ directory is tracked by Git.

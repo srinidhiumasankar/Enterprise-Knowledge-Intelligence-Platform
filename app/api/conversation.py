@@ -528,6 +528,7 @@ async def stream_assistant_response(
                     )
                 except Exception as ret_err:
                     logger.error(f"Retrieval failed in stream handler: {ret_err}")
+                    raise ret_err
                 retrieval_latency = (time.perf_counter() - retrieval_start) * 1000
 
             # Yield metadata/citations first
@@ -565,6 +566,81 @@ async def stream_assistant_response(
                 chunks=chunks,
                 conversation_history=conversation_history
             )
+
+            # --- DETAILED RETRIEVAL DIAGNOSTICS LOGGING ---
+            import sys
+            
+            def safe_print(text):
+                try:
+                    print(text, file=sys.stdout)
+                except UnicodeEncodeError:
+                    try:
+                        print(text.replace("↓", "v"), file=sys.stdout)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+
+            # Gather all info
+            retrieved_doc_count = len(set(r["document_id"] for r in chunks if "document_id" in r))
+            retrieved_chunk_count = len(chunks)
+            top_similarity_scores = [r["score"] for r in chunks]
+            doc_filenames = list(set(r["metadata"]["filename"] for r in chunks if r.get("metadata", {}).get("filename")))
+            chunk_ids = [r["chunk_id"] for r in chunks]
+            context_length = len(prompt)
+            
+            # Determine threshold filtering status
+            filtered_by_threshold = "No"
+            why_zero = ""
+            
+            if not docs:
+                why_zero = "No documents have been uploaded to this workspace or database for the current user."
+            elif 'retrieval_service' in locals() and hasattr(retrieval_service, 'last_search_diagnostics'):
+                diag = retrieval_service.last_search_diagnostics
+                if diag.get("filtered_count", 0) > 0:
+                    filtered_by_threshold = f"Yes ({diag['filtered_count']} chunks below threshold of {diag.get('threshold', 0.45)} filtered)"
+                why_zero = diag.get("why_zero_chunks", "")
+            else:
+                why_zero = "Retrieval service was not executed or initialization failed."
+
+            # Section 1: Question
+            safe_print("\nQuestion:")
+            safe_print(query_str)
+            safe_print("↓")
+            
+            # Section 2: Retrieved chunks
+            safe_print("\nRetrieved chunks:")
+            safe_print(f"Retrieved document count: {retrieved_doc_count}")
+            safe_print(f"Retrieved chunk count: {retrieved_chunk_count}")
+            safe_print(f"Document filenames: {doc_filenames}")
+            safe_print(f"Chunk IDs: {chunk_ids}")
+            safe_print(f"Whether similarity threshold filtered chunks: {filtered_by_threshold}")
+            if retrieved_chunk_count == 0:
+                safe_print(f"Retrieval returned zero chunks. Reason: {why_zero}")
+            safe_print("↓")
+            
+            # Section 3: Similarity scores
+            safe_print("\nSimilarity scores:")
+            safe_print(f"Top similarity scores: {top_similarity_scores}")
+            if top_similarity_scores:
+                for score, r in zip(top_similarity_scores, chunks):
+                    fname = r.get("metadata", {}).get("filename", "Unknown")
+                    cid = r.get("chunk_id", "Unknown")
+                    safe_print(f"  - Score: {score:.4f} (Doc: {fname}, Chunk: {cid})")
+            safe_print("↓")
+            
+            # Section 4: Context built
+            safe_print("\nContext built:")
+            safe_print(f"Context length: {context_length}")
+            safe_print("Final context passed to Gemini:")
+            safe_print("-" * 80)
+            safe_print(prompt)
+            safe_print("-" * 80)
+            safe_print("↓")
+            
+            # Section 5: Calling Gemini...
+            safe_print("\nCalling Gemini...")
+            sys.stdout.flush()
 
             # 4. Stream generated answer from Gemini
             gemini_service = GeminiService()
@@ -639,10 +715,14 @@ async def stream_assistant_response(
 
             except Exception as gemini_err:
                 logger.error(f"Streaming generation error: {gemini_err}")
+                safe_print("↓")
+                safe_print(f"\nGemini error (if quota exhausted): {gemini_err}\n")
+                sys.stdout.flush()
                 yield json.dumps({
                     "type": "error",
                     "detail": str(gemini_err)
                 }) + "\n"
+                raise gemini_err
 
         finally:
             db.close()

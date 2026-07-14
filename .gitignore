@@ -36,3 +36,5 @@ build/
 dist/
 *.egg-info/
 vector_store/
+chroma_db/
+*.db

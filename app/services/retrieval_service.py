@@ -32,6 +32,7 @@ class RetrievalService:
         self.chunk_repo = chunk_repository
         self.embedding_service = embedding_service or EmbeddingService()
         self.chroma_service = chroma_service or ChromaService()
+        self.last_search_diagnostics = {}
 
     def _trigger_bg_record(
         self,
@@ -163,9 +164,25 @@ class RetrievalService:
             total_retrieved = len(ids)
             logger.info(f"ChromaDB returned {total_retrieved} raw results.")
 
+            # Initialize diagnostics dictionary
+            self.last_search_diagnostics = {
+                "query": query,
+                "raw_retrieved_count": total_retrieved,
+                "filtered_count": 0,
+                "db_mismatch_count": 0,
+                "duplicate_count": 0,
+                "threshold": threshold,
+                "why_zero_chunks": "",
+                "chroma_returned_zero": False,
+                "all_below_threshold": False,
+                "all_duplicates": False
+            }
+
             if not ids:
                 logger.info(f"No semantic search results found for user_id={user_id}")
                 execution_time_ms = (time.time() - start_time) * 1000
+                self.last_search_diagnostics["chroma_returned_zero"] = True
+                self.last_search_diagnostics["why_zero_chunks"] = "ChromaDB vector search returned 0 results for the query. Either the vector store is empty, or no chunks match the query embedding."
                 self._trigger_bg_record(user_id, workspace_id, query, collection_ids, execution_time_ms, 0)
                 return []
 
@@ -178,11 +195,14 @@ class RetrievalService:
             seen_texts = set()
             seen_chunk_ids = set()
             filtered_count = 0
+            db_mismatch_count = 0
+            duplicate_count = 0
 
             for idx, chunk_uuid in enumerate(ids):
                 db_chunk_id = uuid_to_chunk_id.get(chunk_uuid)
                 if db_chunk_id is None:
                     logger.warning(f"Chunk UUID '{chunk_uuid}' exists in ChromaDB but was not found in SQL database.")
+                    db_mismatch_count += 1
                     continue
 
                 distance = distances[idx]
@@ -210,6 +230,7 @@ class RetrievalService:
                 # Deduplicate based on text content and database ID
                 cleaned_text_lower = chunk_text.strip().lower()
                 if cleaned_text_lower in seen_texts or db_chunk_id in seen_chunk_ids:
+                    duplicate_count += 1
                     continue
 
                 seen_texts.add(cleaned_text_lower)
@@ -235,12 +256,38 @@ class RetrievalService:
             ranked_results.sort(key=lambda x: x["score"], reverse=True)
 
             execution_time_ms = (time.time() - start_time) * 1000
+
+            # Update diagnostics
+            self.last_search_diagnostics["filtered_count"] = filtered_count
+            self.last_search_diagnostics["db_mismatch_count"] = db_mismatch_count
+            self.last_search_diagnostics["duplicate_count"] = duplicate_count
+
+            if len(ranked_results) == 0:
+                if total_retrieved > 0 and filtered_count == total_retrieved:
+                    self.last_search_diagnostics["all_below_threshold"] = True
+                    self.last_search_diagnostics["why_zero_chunks"] = f"All {total_retrieved} retrieved chunks were filtered out because their similarity scores were below the threshold of {threshold}."
+                elif total_retrieved > 0 and db_mismatch_count == total_retrieved:
+                    self.last_search_diagnostics["why_zero_chunks"] = f"All {total_retrieved} retrieved chunks were missing from the SQL database (UUID mismatch)."
+                elif total_retrieved > 0 and duplicate_count == total_retrieved:
+                    self.last_search_diagnostics["all_duplicates"] = True
+                    self.last_search_diagnostics["why_zero_chunks"] = "All retrieved chunks were filtered out as duplicates."
+                else:
+                    self.last_search_diagnostics["why_zero_chunks"] = f"No chunks remained after filtering (mismatch: {db_mismatch_count}, below threshold: {filtered_count}, duplicate: {duplicate_count})."
+
             logger.info(
                 f"Search completed. Query: '{query}'. "
                 f"Retrieved: {total_retrieved} raw chunks, Filtered: {filtered_count} under threshold, "
                 f"Returned: {len(ranked_results)} unique ranked chunks. "
                 f"Execution time: {execution_time_ms:.2f}ms."
             )
+
+            # --- TEMPORARY DIAGNOSTIC LOGS ---
+            logger.info(f"Retrieved chunk count: {len(ranked_results)}")
+            logger.info(f"Similarity threshold: {threshold}")
+            for idx, r in enumerate(ranked_results, 1):
+                preview = r["text"][:200]
+                logger.info(f"Chunk {idx} - Score: {r['score']}, Preview: {preview}")
+            # ----------------------------------
 
             # self._trigger_bg_record(user_id, workspace_id, query, collection_ids, execution_time_ms, len(ranked_results))
 

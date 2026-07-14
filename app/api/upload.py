@@ -191,11 +191,21 @@ async def process_document_endpoint(
             document_id=document_id, owner_id=current_user.id
         )
 
+        # Automatically chunk and index the document so it is fully embedded and indexed in ChromaDB
+        chunk_service = ChunkService(
+            chunk_repository=ChunkRepository(db),
+            document_repository=DocumentRepository(db)
+        )
+        chunk_res = chunk_service.chunk_document(
+            document_id=document_id, owner_id=current_user.id
+        )
+
         return ProcessResponse(
             document_id=document_id,
             status="processed",
             characters=len(extracted_text),
             preview=extracted_text[:500],
+            num_chunks=chunk_res.get("total_chunks"),
         )
     except HTTPException as he:
         raise he

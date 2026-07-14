@@ -158,6 +158,79 @@ async def search_collection_chunks(
             conversation_history=conversation_history
         )
 
+        # --- DETAILED RETRIEVAL DIAGNOSTICS LOGGING ---
+        import sys
+        
+        def safe_print(text):
+            try:
+                print(text, file=sys.stdout)
+            except UnicodeEncodeError:
+                try:
+                    print(text.replace("↓", "v"), file=sys.stdout)
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+        # Gather all info
+        retrieved_doc_count = len(set(r["document_id"] for r in results if "document_id" in r))
+        retrieved_chunk_count = len(results)
+        top_similarity_scores = [r["score"] for r in results]
+        doc_filenames = list(set(r["metadata"]["filename"] for r in results if r.get("metadata", {}).get("filename")))
+        chunk_ids = [r["chunk_id"] for r in results]
+        context_length = len(prompt)
+        
+        # Determine threshold filtering status
+        filtered_by_threshold = "No"
+        why_zero = ""
+        
+        if 'retrieval_service' in locals() and hasattr(retrieval_service, 'last_search_diagnostics'):
+            diag = retrieval_service.last_search_diagnostics
+            if diag.get("filtered_count", 0) > 0:
+                filtered_by_threshold = f"Yes ({diag['filtered_count']} chunks below threshold of {diag.get('threshold', 0.45)} filtered)"
+            why_zero = diag.get("why_zero_chunks", "")
+        else:
+            why_zero = "Retrieval service was not executed or initialization failed."
+
+        # Section 1: Question
+        safe_print("\nQuestion:")
+        safe_print(query_str)
+        safe_print("↓")
+        
+        # Section 2: Retrieved chunks
+        safe_print("\nRetrieved chunks:")
+        safe_print(f"Retrieved document count: {retrieved_doc_count}")
+        safe_print(f"Retrieved chunk count: {retrieved_chunk_count}")
+        safe_print(f"Document filenames: {doc_filenames}")
+        safe_print(f"Chunk IDs: {chunk_ids}")
+        safe_print(f"Whether similarity threshold filtered chunks: {filtered_by_threshold}")
+        if retrieved_chunk_count == 0:
+            safe_print(f"Retrieval returned zero chunks. Reason: {why_zero}")
+        safe_print("↓")
+        
+        # Section 3: Similarity scores
+        safe_print("\nSimilarity scores:")
+        safe_print(f"Top similarity scores: {top_similarity_scores}")
+        if top_similarity_scores:
+            for score, r in zip(top_similarity_scores, results):
+                fname = r.get("metadata", {}).get("filename", "Unknown")
+                cid = r.get("chunk_id", "Unknown")
+                safe_print(f"  - Score: {score:.4f} (Doc: {fname}, Chunk: {cid})")
+        safe_print("↓")
+        
+        # Section 4: Context built
+        safe_print("\nContext built:")
+        safe_print(f"Context length: {context_length}")
+        safe_print("Final context passed to Gemini:")
+        safe_print("-" * 80)
+        safe_print(prompt)
+        safe_print("-" * 80)
+        safe_print("↓")
+        
+        # Section 5: Calling Gemini...
+        safe_print("\nCalling Gemini...")
+        sys.stdout.flush()
+
         # Call Gemini Service to generate answer
         gemini_start = time.perf_counter()
         try:
@@ -217,6 +290,9 @@ async def search_collection_chunks(
                     scores,
                     "Failure"
                 )
+            safe_print("↓")
+            safe_print(f"\nGemini error (if quota exhausted): {gemini_e}\n")
+            sys.stdout.flush()
             raise gemini_e
 
     except KeyError as e:

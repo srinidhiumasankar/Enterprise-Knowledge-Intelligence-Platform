@@ -132,42 +132,30 @@
 
   <!-- Bottom Layout: Workspace Details & Recent Activity -->
   <div class="row g-4">
-    <!-- Left: Workspace Details Card -->
+    <!-- Left: AI Configuration Card -->
     <div class="col-lg-5">
       <div class="dashboard-section-card h-100">
         <h5 class="text-white fw-bold mb-3 border-bottom border-secondary pb-2">
-          <i class="bi bi-cpu me-2 text-primary"></i>System Details
+          <i class="bi bi-cpu me-2 text-primary"></i>AI Configuration
         </h5>
         <div class="row g-3 text-white small">
-          <div class="col-6 text-muted">System Context</div>
-          <div class="col-6 text-end fw-semibold text-truncate" id="valWsName">loading...</div>
-          
-          <div class="col-6 text-muted">Owner</div>
-          <div class="col-6 text-end fw-semibold text-truncate" id="valWsOwner">loading...</div>
-
-          <div class="col-6 text-muted">Created Date</div>
-          <div class="col-6 text-end fw-semibold" id="valWsCreated">loading...</div>
-
-          <div class="col-6 text-muted">Document Count</div>
-          <div class="col-6 text-end fw-semibold" id="valDocCount">0</div>
-
-          <div class="col-6 text-muted">Conversation Count</div>
-          <div class="col-6 text-end fw-semibold" id="valConvCountDetail">0</div>
-
-          <div class="col-6 text-muted">Storage Used</div>
-          <div class="col-6 text-end fw-semibold" id="valStorageUsed">0 B</div>
-
           <div class="col-6 text-muted">Embedding Model</div>
-          <div class="col-6 text-end fw-semibold text-info">text-embedding-3-small</div>
-
+          <div class="col-6 text-end fw-semibold text-info">{{ settings.EMBEDDING_MODEL_NAME if settings else 'BAAI/bge-base-en-v1.5' }}</div>
+          
           <div class="col-6 text-muted">Vector Database</div>
           <div class="col-6 text-end fw-semibold text-info">ChromaDB (Local)</div>
 
           <div class="col-6 text-muted">LLM Provider</div>
-          <div class="col-6 text-end fw-semibold text-info">OpenAI / LangChain</div>
+          <div class="col-6 text-end fw-semibold text-info">Google Gemini / LangChain</div>
 
-          <div class="col-6 text-muted">Last Activity</div>
-          <div class="col-6 text-end fw-semibold" id="valLastActivity">loading...</div>
+          <div class="col-6 text-muted">Framework</div>
+          <div class="col-6 text-end fw-semibold text-info">FastAPI + LangChain</div>
+
+          <div class="col-6 text-muted">Authentication</div>
+          <div class="col-6 text-end fw-semibold text-info">JWT Bearer Tokens</div>
+
+          <div class="col-6 text-muted">Deployment</div>
+          <div class="col-6 text-end fw-semibold text-info">Docker (Local)</div>
         </div>
       </div>
     </div>
@@ -258,18 +246,12 @@
 
       // Bind workspace overview
       document.getElementById("lastActivityBadge").innerText = "Last Activity: " + window.parseUTCDate(data.overview.last_activity_at).toLocaleString();
-      document.getElementById("valWsName").innerText = data.overview.workspace_name;
-      document.getElementById("valWsOwner").innerText = data.overview.owner_name;
-      document.getElementById("valWsCreated").innerText = window.parseUTCDate(data.overview.created_at).toLocaleDateString();
-      document.getElementById("valLastActivity").innerText = window.parseUTCDate(data.overview.last_activity_at).toLocaleString();
 
       // Bind primary card metrics
       document.getElementById("statDocsCount").innerText = data.document_metrics.total_documents;
       document.getElementById("statDocsToday").innerText = data.document_metrics.uploaded_today + " uploaded today";
-      document.getElementById("valDocCount").innerText = data.document_metrics.total_documents;
       
       document.getElementById("statConvCount").innerText = data.conversation_metrics.total_conversations;
-      document.getElementById("valConvCountDetail").innerText = data.conversation_metrics.total_conversations;
       document.getElementById("statConvActiveArchived").innerText = `${data.conversation_metrics.active_conversations} Active / ${data.conversation_metrics.archived_conversations} Arc`;
 
       document.getElementById("statSearchCount").innerText = data.search_metrics.searches_today;
@@ -286,7 +268,6 @@
 
       const totalStorage = data.storage_metrics.total_storage_bytes;
       document.getElementById("statStorageSize").innerText = formatBytes(totalStorage);
-      document.getElementById("valStorageUsed").innerText = formatBytes(totalStorage);
       document.getElementById("statStorageVector").innerText = "Vector: " + formatBytes(data.storage_metrics.vector_db_size_bytes);
 
       // Render recent activity list

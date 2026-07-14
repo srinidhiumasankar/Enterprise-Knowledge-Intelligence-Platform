@@ -137,10 +137,14 @@ async def dashboard_page(request: Request) -> HTMLResponse:
     """
     Render the Workspace Dashboard UI page.
     """
+    from app.config import settings
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
-        context={"title": "Workspace Dashboard - Enterprise Knowledge Intelligence Platform"},
+        context={
+            "title": "Workspace Dashboard - Enterprise Knowledge Intelligence Platform",
+            "settings": settings
+        },
     )
 
 
